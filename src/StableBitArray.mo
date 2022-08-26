@@ -3,6 +3,9 @@ import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 
+import Itertools "mo:Itertools/Iter";
+import StableBuffer "mo:StableBuffer/StableBuffer";
+
 import NatLib "NatLib";
 
 module{
@@ -10,35 +13,43 @@ module{
     type NatBlock = NatLib.NatBlock;
 
     public type StableBitArray = {
-        blocks : [var NatBlock];
         natType : NatType;
-        nbits : Nat;
+        var nbits : Nat;
+        buffer : StableBuffer.StableBuffer<NatBlock>;
     };
 
-    public func init(natType : NatType, nbits: Nat, fill: Bool ) : StableBitArray{
-        
-        let nBlocks = if (nbits > 0) { 
-            (nbits / NatLib.bits(natType)) + 1
-        } else {0};
+    public func new(natType : NatType, nbits : Nat) : StableBitArray{
+        {
+            var nbits = 0;  natType;
+            buffer = StableBuffer.initPresized(
+                (nbits / NatLib.bits(natType)) + 1
+            );
+        }
+    };
 
-        let rbits = (nbits % NatLib.bits(natType)) + 1;
+    public func init(natType : NatType, nbits : Nat, fill : Bool) : StableBitArray{
+        let newBufferSize = (nbits / NatLib.bits(natType)) + 1;
+        let buffer = StableBuffer.initPresized<NatBlock>( newBufferSize );
 
-        let defaultBlock = if (fill) {
-            NatLib.max(natType)
-        } else { 
-            NatLib.zero(natType)
+        if (fill){
+            for (i in Iter.range(1, newBufferSize)){
+                if (i == newBufferSize){
+                    let (_, p) = _get_pos(nbits, natType);
+                    let lastBlock = NatLib.fromNat((2 ** p) - 1, natType);
+                    StableBuffer.add(buffer, lastBlock);
+                } else{
+                    StableBuffer.add(buffer, NatLib.max(natType));
+                }
+            };
+        }else{
+            for (_ in Iter.range(1, newBufferSize)){
+                StableBuffer.add(buffer, NatLib.zero(natType));
+            }
         };
 
         {
-            nbits; natType;
-            blocks = Array.tabulateVar<NatBlock>(nBlocks, func (i){
-                if (i + 1 == nBlocks){
-                    let rbits = nbits % NatLib.bits(natType);
-                    NatLib.fromNat((2 ** rbits) - 1, natType)
-                }else{
-                    defaultBlock
-                }
-            });
+            natType; buffer;
+            var nbits = nbits; 
         }
     };
 
@@ -59,33 +70,31 @@ module{
         init(#Nat64, nbits, fill)
     };
 
-    public func size({ nbits }: StableBitArray) : Nat{
-        nbits
+    public func size(self : StableBitArray) : Nat{
+        self.nbits
     };
 
-    public func count({ blocks; natType }: StableBitArray) : Nat {
+    public func count(self: StableBitArray) : Nat {
 
-        var cnt : NatBlock = NatLib.zero(natType);
+        var cnt : NatBlock = NatLib.zero(self.natType);
 
-        for (block in blocks.vals()){
+        for (block in blocks(self)){
             cnt := NatLib.add(cnt, NatLib.bitcountNonZero(block));
         };
         
         NatLib.toNat(cnt)
     };
 
-    public func clone({ blocks; natType; nbits }: StableBitArray) : StableBitArray{
+    public func clone(self : StableBitArray) : StableBitArray{
         {
-            natType; nbits;
-            blocks = Array.tabulateVar<NatBlock>(
-                blocks.size(), 
-                func(i){ blocks[i] }
-            );
+            natType = self.natType; 
+            var nbits = self.nbits;
+            buffer = StableBuffer.clone(self.buffer);
         }
     };
 
-    public func capacity({blocks; nbits} : StableBitArray) : Nat{
-        blocks.size() * nbits
+    public func capacity(self : StableBitArray) : Nat{
+        StableBuffer.size(self.buffer) * self.nbits
     };
 
     func _get_pos(n: Nat, natType : NatType) : (Nat, Nat){
@@ -93,53 +102,82 @@ module{
     };
 
     public func get(self : StableBitArray, n : Nat) : Bool {
-        let { blocks; natType; nbits } = self;
-
-        if (n >= nbits){
+        if (n >= self.nbits){
             Debug.trap("index out of bounds: the size is " # debug_show(size(self)) # " but the index is " # debug_show n);
         };
 
-        let (r, c) = _get_pos(n, natType);
-
-        NatLib.bittest(blocks[r], c)
+        let (r, c) = _get_pos(n, self.natType);
+        let block = StableBuffer.get(self.buffer, r);
+        NatLib.bittest(block, c)
     };
 
     public func set(self : StableBitArray, i : Nat, val : Bool) {
-        let { blocks; natType; nbits } = self;
-
-        if (i >= nbits){
+        if (i >= self.nbits){
             Debug.trap("index out of bounds: the size is " # debug_show(size(self)) # " but the index is " # debug_show i);
         };
 
-        let (r, c) = _get_pos(i, natType);
+        let (r, c) = _get_pos(i, self.natType);
 
-        blocks[r] := if (val){
-            NatLib.bitset(blocks[r], c);
+        let block = if (val){
+            NatLib.bitset(StableBuffer.get(self.buffer, r), c);
         }else{
-            NatLib.bitclear(blocks[r], c);
+            NatLib.bitclear(StableBuffer.get(self.buffer, r), c);
         };
+
+        StableBuffer.put(self.buffer, r, block);
+    };
+
+    public func add(self : StableBitArray, val : Bool) {
+
+        if (self.nbits % NatLib.bits(self.natType) == 0){
+            StableBuffer.add(self.buffer, NatLib.zero(self.natType));
+        };
+
+        self.nbits +=1;
+        set(self, self.nbits - 1, val);
+    };
+
+    public func removeLast(self : StableBitArray) : ?Bool {
+        if (self.nbits == 0) return null;
+
+        let val = get(self, self.nbits - 1);
+
+        if (self.nbits % NatLib.bits(self.natType) == 1){
+            ignore StableBuffer.removeLast(self.buffer);
+        }else{
+            set(self, self.nbits - 1, false);
+        };
+
+        self.nbits -=1;
+
+        ?val
     };
 
     public func blocks(self : StableBitArray) : Iter.Iter<NatBlock>{
-        self.blocks.vals()
+        StableBuffer.vals(self.buffer)
     };
 
-    public func setAll({blocks; natType} : StableBitArray) {
-
-        for (i in Iter.range(0, blocks.size() - 1)){
-            if (i + 1 == blocks.size()){
-                let (_, p) = _get_pos(blocks.size(), natType);
-                blocks[i] := NatLib.fromNat((2 ** p) - 1, natType);
-            } else{
-                blocks[i] := NatLib.max(natType);
+    public func setAll(self : StableBitArray, val : Bool) {
+        if (val){
+            for (i in Iter.range(0, StableBuffer.size(self.buffer) - 1)){
+                if (i + 1 == StableBuffer.size(self.buffer)){
+                    let (_, p) = _get_pos(self.nbits, self.natType);
+                    let lastBlock = NatLib.fromNat((2 ** p) - 1, self.natType);
+                    StableBuffer.put(self.buffer, i, lastBlock);
+                } else{
+                    StableBuffer.put(self.buffer, i, NatLib.max(self.natType));
+                }
+            };
+        }else{
+            for (i in Iter.range(0, StableBuffer.size(self.buffer) - 1)){
+                StableBuffer.put(self.buffer, i, NatLib.zero(self.natType));
             }
-        };
+        }
     };
 
-    public func clear({blocks; natType} : StableBitArray) {
-        for (i in Iter.range(0, blocks.size() - 1)){
-            blocks[i] := NatLib.zero(natType)
-        };
+    public func clear(self : StableBitArray) {
+        self.nbits := 0;
+        StableBuffer.clear(self.buffer);
     };
 
     public func any(self : StableBitArray) : Bool {
@@ -177,8 +215,13 @@ module{
             Debug.trap("Bit Arrays must of the same size to perform bit operations")
         };
 
-        for (i in Iter.range(0, self.blocks.size() - 1)){
-            self.blocks[i] := fn(self.blocks[i], other.blocks[i]);
+        for (i in Iter.range(0, StableBuffer.size(self.buffer) - 1)){
+            let x = StableBuffer.get(self.buffer, i);
+            let y = StableBuffer.get(other.buffer, i);
+
+            let block = fn(x, y);
+
+            StableBuffer.put(self.buffer, i, block);
         };
     };
 
@@ -195,18 +238,17 @@ module{
     };
 
     public func invert(self : StableBitArray){
-        for (i in Iter.range(0, self.blocks.size() - 1)){
-            self.blocks[i] := NatLib.bitnot(self.blocks[i]);
+        for (i in Iter.range(0, StableBuffer.size(self.buffer) - 1)){
+            let n = StableBuffer.get(self.buffer, i);
+            StableBuffer.put(self.buffer, i, NatLib.bitnot(n));
         };
     };
 
     public func fromIter(natType: NatType, iter : Iter.Iter<Bool>) : StableBitArray {
-        let arr = Iter.toArray(iter);
+        let bitArray = new(natType, 0);
 
-        let bitArray = init(natType, arr.size(), false);
-
-        for (i in Iter.range(0, arr.size() - 1)){
-            set(bitArray, i, arr[i]);
+        for (val in iter){
+            add(bitArray, val);
         };
 
         bitArray
@@ -217,9 +259,11 @@ module{
 
         object{
             public func next() : ?Bool{
+                if (i >= self.nbits) return null;
+
                 let (r, c) = _get_pos(i, self.natType);
 
-                let val = NatLib.bittest(self.blocks[r], c);
+                let val = NatLib.bittest(StableBuffer.get(self.buffer, r), c);
                 i+=1;
 
                 ?val
@@ -229,7 +273,7 @@ module{
 
     // To-do - remove the extra bits after the size
     public func toBytes(self : StableBitArray) : [Nat8] {
-        let bufferSize = NatLib.bytes(self.natType) * self.blocks.size();
+        let bufferSize = NatLib.bytes(self.natType) * StableBuffer.size(self.buffer);
 
         let buffer = Buffer.Buffer<Nat8>(bufferSize);
 
@@ -245,10 +289,10 @@ module{
     };
 
     // To-do - remove leading zeroes
-    public func toText({ blocks; natType}: StableBitArray) : Text{
+    public func toText(self : StableBitArray) : Text{
         var binary  = "";
 
-        for (block in blocks.vals()){
+        for (block in blocks(self)){
             binary #= NatLib.toBinaryText(block); 
         };
 

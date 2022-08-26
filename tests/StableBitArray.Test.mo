@@ -15,6 +15,7 @@ let success = run([
         describe("With Nat8 Block", [
             it("init", do{
                 let bitArray = StableBitArray.initNat8(64, true);
+                Debug.print("with nat: " #debug_show StableBitArray.count(bitArray));
 
                 assertTrue(StableBitArray.count(bitArray) == 64)
             }),
@@ -32,7 +33,7 @@ let success = run([
                     StableBitArray.get(bitArray, 3),
                     not StableBitArray.get(bitArray, 5),
                     StableBitArray.get(bitArray, 6),
-                    StableBitArray.toIter(bitArray) == [
+                    Iter.toArray(StableBitArray.toIter(bitArray)) == [
                         false, true, false, true, 
                         false, false, true, false
                     ]
