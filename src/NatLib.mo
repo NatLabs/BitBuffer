@@ -15,7 +15,6 @@ module {
     };
 
     public type NatBlock = {
-        #Empty;
         #Nat8 : Nat8; 
         #Nat16 : Nat16;
         #Nat32 : Nat32;
@@ -30,15 +29,6 @@ module {
             case (#Nat64) 64;
         }
     };
-
-    // public func increaseBits(n: NatBlock) : NatBlock{
-    //     switch(n){
-    //         case (#Nat8(n))   Nat8.toNat(n);
-    //         case (#Nat16(n)) Nat16.toNat(n);
-    //         case (#Nat32(n)) Nat32.toNat(n);
-    //         case (#Nat64(n)) Nat64.toNat(n);
-    //     }
-    // };
 
     public func bytes(_type : NatType) : Nat{
         bits(_type) / 8
@@ -69,7 +59,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 + n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 + n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -81,7 +71,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 - n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 - n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -93,7 +83,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 * n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 * n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -105,7 +95,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 / n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 / n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -117,7 +107,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 % n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 % n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -129,7 +119,19 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 ** n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 ** n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
+            };
+        }
+    };
+
+    public func equal(_n1 : NatBlock, _n2 : NatBlock) : Bool {
+        switch(_n1, _n2){
+            case (#Nat8(n1), #Nat8(n2))   n1 == n2;
+            case (#Nat16(n1), #Nat16(n2)) n1 == n2;
+            case (#Nat32(n1), #Nat32(n2)) n1 == n2;
+            case (#Nat64(n1), #Nat64(n2)) n1 == n2;
+            case (_){
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -149,7 +151,6 @@ module {
             case (#Nat16(n)) Nat16.toNat(n);
             case (#Nat32(n)) Nat32.toNat(n);
             case (#Nat64(n)) Nat64.toNat(n);
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 
@@ -159,7 +160,6 @@ module {
             case (#Nat16(n)) #Nat16(Nat16.bitcountNonZero(n));
             case (#Nat32(n)) #Nat32(Nat32.bitcountNonZero(n));
             case (#Nat64(n)) #Nat64(Nat64.bitcountNonZero(n));
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 
@@ -169,7 +169,6 @@ module {
             case (#Nat16(n)) #Nat16(Nat16.bitcountLeadingZero(n));
             case (#Nat32(n)) #Nat32(Nat32.bitcountLeadingZero(n));
             case (#Nat64(n)) #Nat64(Nat64.bitcountLeadingZero(n));
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 
@@ -179,7 +178,6 @@ module {
             case (#Nat16(n)) #Nat16(^n);
             case (#Nat32(n)) #Nat32(^n);
             case (#Nat64(n)) #Nat64(^n);
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 
@@ -190,7 +188,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 | n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 | n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -202,7 +200,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 ^ n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 ^ n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -214,7 +212,7 @@ module {
             case (#Nat32(n1), #Nat32(n2)) #Nat32(n1 & n2);
             case (#Nat64(n1), #Nat64(n2)) #Nat64(n1 & n2);
             case (_){
-                Debug.trap("Parameters must be of the same variant type and cannot be #Empty");
+                Debug.trap("Parameters must be of the same variant type");
             };
         }
     };
@@ -225,8 +223,6 @@ module {
             case (#Nat16(n)) #Nat16(n << Nat16.fromNat(p));
             case (#Nat32(n)) #Nat32(n << Nat32.fromNat(p));
             case (#Nat64(n)) #Nat64(n << Nat64.fromNat(p));
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
-            
         }
     };
 
@@ -236,8 +232,6 @@ module {
             case (#Nat16(n)) #Nat16(n >> Nat16.fromNat(p));
             case (#Nat32(n)) #Nat32(n >> Nat32.fromNat(p));
             case (#Nat64(n)) #Nat64(n >> Nat64.fromNat(p));
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
-
         }
     };
 
@@ -247,7 +241,6 @@ module {
             case (#Nat16(n)) #Nat16(Nat16.bitset(n, p));
             case (#Nat32(n)) #Nat32(Nat32.bitset(n, p));
             case (#Nat64(n)) #Nat64(Nat64.bitset(n, p));
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 
@@ -257,7 +250,6 @@ module {
             case (#Nat16(n)) #Nat16(Nat16.bitclear(n, p));
             case (#Nat32(n)) #Nat32(Nat32.bitclear(n, p));
             case (#Nat64(n)) #Nat64(Nat64.bitclear(n, p));
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 
@@ -267,7 +259,6 @@ module {
             case (#Nat16(n)) Nat16.bittest(n, p);
             case (#Nat32(n)) Nat32.bittest(n, p);
             case (#Nat64(n)) Nat64.bittest(n, p);
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 
@@ -275,8 +266,6 @@ module {
         var binary = "";
 
         switch(_n){
-            case (#Empty) return "";
-
             case (#Nat8(n)) {
                 var _bits = bits(#Nat8);
 
@@ -344,7 +333,6 @@ module {
                     nat64To8( n >> Nat64.fromNat(i * 8))
                 })
             };
-            case (#Empty) Debug.trap("The #Empty variant cannot hold a value");
         }
     };
 };
