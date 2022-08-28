@@ -4,7 +4,7 @@ import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 
 import Itertools "mo:Itertools/Iter";
-import StableBuffer "mo:StableBuffer/StableBuffer";
+import SB "mo:StableBuffer/StableBuffer";
 
 import NatLib "NatLib";
 
@@ -15,20 +15,20 @@ module{
     public type StableBitBuffer = {
         natType : NatType;
         var nbits : Nat;
-        buffer : StableBuffer.StableBuffer<NatBlock>;
+        buffer : SB.StableBuffer<NatBlock>;
     };
 
     public func new(natType : NatType) : StableBitBuffer{
         {
             var nbits = 0;  natType;
-            buffer = StableBuffer.init();
+            buffer = SB.init();
         }
     };
 
     public func newPresized(natType : NatType, nbits : Nat) : StableBitBuffer{
         {
             var nbits = 0;  natType;
-            buffer = StableBuffer.initPresized(
+            buffer = SB.initPresized(
                 (nbits / NatLib.bits(natType)) + 1
             );
         }
@@ -36,21 +36,21 @@ module{
 
     public func init(natType : NatType, nbits : Nat, fill : Bool) : StableBitBuffer{
         let newBufferSize = (nbits / NatLib.bits(natType)) + 1;
-        let buffer = StableBuffer.initPresized<NatBlock>( newBufferSize );
+        let buffer = SB.initPresized<NatBlock>( newBufferSize );
 
         if (fill){
             for (i in Itertools.range(0, newBufferSize)){
                 if (i + 1 == newBufferSize){
                     let (_, p) = _get_pos(nbits, natType);
                     let lastBlock = NatLib.fromNat((2 ** p) - 1, natType);
-                    StableBuffer.add(buffer, lastBlock);
+                    SB.add(buffer, lastBlock);
                 } else{
-                    StableBuffer.add(buffer, NatLib.max(natType));
+                    SB.add(buffer, NatLib.max(natType));
                 }
             };
         }else{
             for (_ in Itertools.range(0, newBufferSize)){
-                StableBuffer.add(buffer, NatLib.zero(natType));
+                SB.add(buffer, NatLib.zero(natType));
             }
         };
 
@@ -98,13 +98,13 @@ module{
         {
             natType = self.natType; 
             var nbits = self.nbits;
-            buffer = StableBuffer.clone(self.buffer);
+            buffer = SB.clone(self.buffer);
         }
     };
 
     /// Returns the total capacity of the internal storage
     public func capacity(self : StableBitBuffer) : Nat{
-        StableBuffer.size(self.buffer) * NatLib.bits(self.natType)
+        SB.size(self.buffer) * NatLib.bits(self.natType)
     };
 
     func _get_pos(n: Nat, natType : NatType) : (Nat, Nat){
@@ -118,7 +118,7 @@ module{
         };
 
         let (r, c) = _get_pos(n, self.natType);
-        let block = StableBuffer.get(self.buffer, r);
+        let block = SB.get(self.buffer, r);
         NatLib.bittest(block, c)
     };
 
@@ -131,19 +131,19 @@ module{
         let (r, c) = _get_pos(i, self.natType);
 
         let block = if (val){
-            NatLib.bitset(StableBuffer.get(self.buffer, r), c);
+            NatLib.bitset(SB.get(self.buffer, r), c);
         }else{
-            NatLib.bitclear(StableBuffer.get(self.buffer, r), c);
+            NatLib.bitclear(SB.get(self.buffer, r), c);
         };
 
-        StableBuffer.put(self.buffer, r, block);
+        SB.put(self.buffer, r, block);
     };
 
     /// Add a bit to the end of the buffer
     public func add(self : StableBitBuffer, val : Bool) {
 
         if (self.nbits % NatLib.bits(self.natType) == 0){
-            StableBuffer.add(self.buffer, NatLib.zero(self.natType));
+            SB.add(self.buffer, NatLib.zero(self.natType));
         };
 
         self.nbits +=1;
@@ -158,7 +158,7 @@ module{
         let val = get(self, self.nbits - 1);
 
         if (self.nbits % NatLib.bits(self.natType) == 1){
-            ignore StableBuffer.removeLast(self.buffer);
+            ignore SB.removeLast(self.buffer);
         }else{
             set(self, self.nbits - 1, false);
         };
@@ -170,12 +170,12 @@ module{
 
     /// Returns an iterator over the nat blocks in the internal storage
     public func blocks(self : StableBitBuffer) : Iter.Iter<NatBlock>{
-        StableBuffer.vals(self.buffer)
+        SB.vals(self.buffer)
     };
 
     /// Sets all the elements in the buffer to the given value
     public func setAll(self : StableBitBuffer, val : Bool) {
-        let bufferSize = StableBuffer.size(self.buffer);
+        let bufferSize = SB.size(self.buffer);
 
         if (val){
             if (bufferSize == 0) return;
@@ -184,14 +184,14 @@ module{
                 if (i + 1 == bufferSize){
                     let (_, p) = _get_pos(self.nbits, self.natType);
                     let lastBlock = NatLib.fromNat((2 ** p) - 1, self.natType);
-                    StableBuffer.put(self.buffer, i, lastBlock);
+                    SB.put(self.buffer, i, lastBlock);
                 } else{
-                    StableBuffer.put(self.buffer, i, NatLib.max(self.natType));
+                    SB.put(self.buffer, i, NatLib.max(self.natType));
                 }
             };
         }else{
             for (i in Itertools.range(0, bufferSize)){
-                StableBuffer.put(self.buffer, i, NatLib.zero(self.natType));
+                SB.put(self.buffer, i, NatLib.zero(self.natType));
             }
         }
     };
@@ -201,7 +201,7 @@ module{
     public func append(self : StableBitBuffer, other : StableBitBuffer){
         if (self.nbits % NatLib.bits(self.natType) == 0 ){
             for (newBlock in blocks(other)){
-                StableBuffer.add(self.buffer, newBlock);
+                SB.add(self.buffer, newBlock);
             }
         }else{
             // 00000111
@@ -214,23 +214,23 @@ module{
 
             let overflow = self.nbits % NatLib.bits(self.natType);
             let offset = NatLib.bits(self.natType) - overflow;
-            let selfBufferSize = StableBuffer.size(self.buffer);
-            let otherBufferSize = StableBuffer.size(other.buffer);
+            let selfBufferSize = SB.size(self.buffer);
+            let otherBufferSize = SB.size(other.buffer);
             var i = 0;
 
             for (newBlock in blocks(other)){
-                StableBuffer.put(
+                SB.put(
                     self.buffer, 
                     selfBufferSize - 1 + i, 
                     NatLib.bitor(
-                        StableBuffer.get(self.buffer, selfBufferSize - 1 + i), 
+                        SB.get(self.buffer, selfBufferSize - 1 + i), 
                         NatLib.bitshiftLeft(newBlock, overflow)
                     )
                 );
 
                 let overflowedBits = NatLib.bitshiftRight(newBlock, offset);
                 if (not (i + 1 == otherBufferSize) or not (overflowedBits == NatLib.zero(self.natType))){
-                    StableBuffer.add(self.buffer, overflowedBits);
+                    SB.add(self.buffer, overflowedBits);
                 };
 
                 i+=1;
@@ -244,7 +244,7 @@ module{
     /// Removes all the bits in the buffer
     public func clear(self : StableBitBuffer) {
         self.nbits := 0;
-        StableBuffer.clear(self.buffer);
+        SB.clear(self.buffer);
     };
 
     /// Checks if any bit is equal to `true` in the buffer
@@ -260,10 +260,10 @@ module{
 
     /// Checks if all bits in the buffer are `true`
     public func all(self : StableBitBuffer) : Bool {
-        let bufferSize = StableBuffer.size(self.buffer);
+        let bufferSize = SB.size(self.buffer);
 
         for (i in Itertools.range(0, bufferSize)){
-            let block = StableBuffer.get(self.buffer, i);
+            let block = SB.get(self.buffer, i);
 
             if (i + 1 == bufferSize){
                 let p = self.nbits % NatLib.bits(self.natType);
@@ -297,13 +297,13 @@ module{
             Debug.trap("Bit Arrays must of the same size to perform bit operations")
         };
 
-        for (i in Itertools.range(0, StableBuffer.size(self.buffer))){
-            let x = StableBuffer.get(self.buffer, i);
-            let y = StableBuffer.get(other.buffer, i);
+        for (i in Itertools.range(0, SB.size(self.buffer))){
+            let x = SB.get(self.buffer, i);
+            let y = SB.get(other.buffer, i);
 
             let block = fn(x, y);
 
-            StableBuffer.put(self.buffer, i, block);
+            SB.put(self.buffer, i, block);
         };
     };
 
@@ -322,21 +322,21 @@ module{
 
     /// Flips all the bits in the buffer
     public func invert(self : StableBitBuffer){
-        for (i in Itertools.range(0, StableBuffer.size(self.buffer))){
-            let n = StableBuffer.get(self.buffer, i);
-            StableBuffer.put(self.buffer, i, NatLib.bitnot(n));
+        for (i in Itertools.range(0, SB.size(self.buffer))){
+            let n = SB.get(self.buffer, i);
+            SB.put(self.buffer, i, NatLib.bitnot(n));
         };
     };
 
     // Todo - fix the extra bits in the last block 
     public func grow( self : StableBitBuffer, newBits: Nat, fill : Bool ){
 
-        let bufferSize = StableBuffer.size(self.buffer);
+        let bufferSize = SB.size(self.buffer);
         let newBlocks = (self.nbits + newBits / NatLib.bits(self.natType)) - bufferSize;
 
         if (fill == false) { 
             for (i in Itertools.range(0, newBlocks)){
-                StableBuffer.add(self.buffer, NatLib.zero(self.natType))
+                SB.add(self.buffer, NatLib.zero(self.natType))
             }
         }else{
             let overflow = self.nbits % NatLib.bits(self.natType);
@@ -344,17 +344,17 @@ module{
 
             if (bufferSize > 0){
                 let i = bufferSize - 1;
-                let lastBlock = StableBuffer.get(self.buffer, i);
+                let lastBlock = SB.get(self.buffer, i);
                 let mask = NatLib.bitnot(
                     NatLib.fromNat((2**overflow) - 1, self.natType)
                 );
 
                 let newBlock = NatLib.bitor(lastBlock, mask);
-                StableBuffer.put(self.buffer, i, newBlock);
+                SB.put(self.buffer, i, newBlock);
             };
 
             for (i in Itertools.range(0, newBlocks)){
-                StableBuffer.add(self.buffer, NatLib.max(self.natType))
+                SB.add(self.buffer, NatLib.max(self.natType))
             };
         };
 
@@ -382,7 +382,7 @@ module{
 
                 let (r, c) = _get_pos(i, self.natType);
 
-                let val = NatLib.bittest(StableBuffer.get(self.buffer, r), c);
+                let val = NatLib.bittest(SB.get(self.buffer, r), c);
                 i+=1;
 
                 ?val
@@ -400,7 +400,7 @@ module{
 
     // Todo - remove the extra bits after the last block
     public func toBytes(self : StableBitBuffer) : [Nat8] {
-        let bufferSize = NatLib.bytes(self.natType) * StableBuffer.size(self.buffer);
+        let bufferSize = NatLib.bytes(self.natType) * SB.size(self.buffer);
 
         let buffer = Buffer.Buffer<Nat8>(bufferSize);
 
