@@ -43,6 +43,32 @@ let success = run([
                     not SBB.get(bitbuffer, 4),
                 ])
             }),
+            it("fromIter", do{
+                let bits = [true, false, false, true, false];
+
+                let bitbuffer = SBB.fromIter(#Nat8, bits.vals());
+
+                assertAllTrue([
+                    SBB.size(bitbuffer) == 5,
+                    SBB.get(bitbuffer, 0) == true,
+                    SBB.get(bitbuffer, 1) == false,
+                    SBB.get(bitbuffer, 2) == false,
+                    SBB.get(bitbuffer, 3) == true,
+                    SBB.get(bitbuffer, 4) == false,
+                ])
+            }),
+            it("toIter", do{
+                let bitbuffer = SBB.init(#Nat8, 5, false);
+
+                SBB.set(bitbuffer, 0, true);
+                SBB.set(bitbuffer, 3, true);
+
+                assertTrue( 
+                    Iter.toArray(SBB.toIter(bitbuffer)) == [
+                        true, false, false, true, false
+                    ]
+                )
+            }),
             it("add", do{
                 let bitbuffer = SBB.new(#Nat8);
                 let isEmptyAtStart = SBB.size(bitbuffer) == 0;
@@ -199,32 +225,22 @@ let success = run([
                     assertAllTrue(tests.toArray())
                 })
             ]),
-            it("fromIter", do{
-                let bits = [true, false, false, true, false];
+            it("grow", do{
+                let bitbuffer = SBB.initNat8(3, false);
 
-                let bitbuffer = SBB.fromIter(#Nat8, bits.vals());
+                SBB.grow(bitbuffer, 3, true);
+
+                let array = Iter.toArray(SBB.toIter(bitbuffer));
 
                 assertAllTrue([
-                    SBB.size(bitbuffer) == 5,
-                    SBB.get(bitbuffer, 0) == true,
-                    SBB.get(bitbuffer, 1) == false,
-                    SBB.get(bitbuffer, 2) == false,
-                    SBB.get(bitbuffer, 3) == true,
-                    SBB.get(bitbuffer, 4) == false,
+                    SBB.size(bitbuffer) == 6,
+                    array == [
+                        false, false, false,
+                        true, true, true
+                    ]
                 ])
             }),
-            it("toIter", do{
-                let bitbuffer = SBB.init(#Nat8, 5, false);
-
-                SBB.set(bitbuffer, 0, true);
-                SBB.set(bitbuffer, 3, true);
-
-                assertTrue( 
-                    Iter.toArray(SBB.toIter(bitbuffer)) == [
-                        true, false, false, true, false
-                    ]
-                )
-            }),
+            
         ]),
 
         describe("With Nat16 Block", [
