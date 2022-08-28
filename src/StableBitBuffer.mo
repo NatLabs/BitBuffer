@@ -331,8 +331,14 @@ module{
     // Todo - fix the extra bits in the last block 
     public func grow( self : StableBitBuffer, newBits: Nat, fill : Bool ){
 
+        if (newBits == 0) return;
+
         let bufferSize = SB.size(self.buffer);
-        let newBlocks = (self.nbits + newBits / NatLib.bits(self.natType)) - bufferSize;
+        let newBlocks = (self.nbits + newBits / NatLib.bits(self.natType)) + 1 - bufferSize;
+
+        // if (bufferSize == 0) {
+
+        // };
 
         if (fill == false) { 
             for (i in Itertools.range(0, newBlocks)){
