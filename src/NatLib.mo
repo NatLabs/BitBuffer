@@ -6,22 +6,29 @@ import Nat64 "mo:base/Nat64";
 
 import Debug "mo:base/Debug";
 
+/// Internal module for performing calculations with sized Natural Numbers 
+/// (Nat8, Nat16, Nat32, Nat65)
+
 module {
-    public type NatType = {
+
+    /// variant indicating the size type of the Nat number
+    public type NatSize = {
         #Nat8; 
         #Nat16;
         #Nat32;
         #Nat64;
     };
 
+    /// variants for each sized Nat number
     public type NatBlock = {
-        #Nat8 : Nat8; 
+        #Nat8 : Nat8;
         #Nat16 : Nat16;
         #Nat32 : Nat32;
         #Nat64 : Nat64;
     };
 
-    public func bits(_type : NatType) : Nat {
+    /// Returns the number of bits for each [NatSize](#natSize)
+    public func bits(_type : NatSize) : Nat {
         switch(_type){
             case (#Nat8)   8;
             case (#Nat16) 16;
@@ -30,11 +37,13 @@ module {
         }
     };
 
-    public func bytes(_type : NatType) : Nat{
+    /// Returns the number of bytes for each [NatSize](#natSize)
+    public func bytes(_type : NatSize) : Nat{
         bits(_type) / 8
-    };
+    };  
 
-    public func zero(_type : NatType) : NatBlock {
+    /// Returns the zero value as a [NatBlock](#natBlock) for the given [NatSize](#natSize)
+    public func zero(_type : NatSize) : NatBlock {
         switch(_type){
             case (#Nat8)   #Nat8(0);
             case (#Nat16) #Nat16(0);
@@ -43,7 +52,8 @@ module {
         }
     };
 
-    public func max(_type : NatType) : NatBlock {
+    /// Returns the max value that can fit into to [NatSize](#natSize) as a [NatBlock](#natBlock)
+    public func max(_type : NatSize) : NatBlock {
         switch(_type){
             case (#Nat8)   #Nat8(0xff);
             case (#Nat16) #Nat16(0xffff);
@@ -52,6 +62,7 @@ module {
         }
     };
 
+    /// Adds two similar sized [NatBlock](#natBlock)'s together
     public func add(_n1 : NatBlock, _n2 : NatBlock) : NatBlock{
         switch(_n1, _n2){
             case (#Nat8(n1), #Nat8(n2))    #Nat8(n1 + n2);
@@ -63,6 +74,10 @@ module {
             };
         }
     };
+
+    /// Subtracts two similar sized [NatBlock](#natBlock) from the other
+    ///
+    /// `sub(a, b) == a - b`
 
     public func sub(_n1 : NatBlock, _n2 : NatBlock) : NatBlock{
         switch(_n1, _n2){
@@ -76,6 +91,7 @@ module {
         }
     };
 
+    /// Multiplies two similar sized [NatBlock](#natBlock) together
     public func mul(_n1 : NatBlock, _n2 : NatBlock) : NatBlock{
         switch(_n1, _n2){
             case (#Nat8(n1), #Nat8(n2))    #Nat8(n1 * n2);
@@ -88,6 +104,7 @@ module {
         }
     };
 
+    /// Divides two similar sized [NatBlock](#natBlock) together
     public func div(_n1 : NatBlock, _n2 : NatBlock) : NatBlock{
         switch(_n1, _n2){
             case (#Nat8(n1), #Nat8(n2))    #Nat8(n1 / n2);
@@ -100,6 +117,7 @@ module {
         }
     };
 
+    /// Returns the remainder from a division between two similar sized [NatBlock](#natBlock)'s
     public func rem(_n1 : NatBlock, _n2 : NatBlock) : NatBlock{
         switch(_n1, _n2){
             case (#Nat8(n1), #Nat8(n2))    #Nat8(n1 % n2);
@@ -112,6 +130,7 @@ module {
         }
     };
 
+    /// Returns the power from a division between two similar sized [NatBlock](#natBlock)'s
     public func pow(_n1 : NatBlock, _n2 : NatBlock) : NatBlock{
         switch(_n1, _n2){
             case (#Nat8(n1), #Nat8(n2))    #Nat8(n1 ** n2);
@@ -124,6 +143,7 @@ module {
         }
     };
 
+    /// Checks if two similar sized [NatBlock's](#natBlock) are equal
     public func equal(_n1 : NatBlock, _n2 : NatBlock) : Bool {
         switch(_n1, _n2){
             case (#Nat8(n1), #Nat8(n2))   n1 == n2;
@@ -136,7 +156,8 @@ module {
         }
     };
 
-    public func fromNat(n : Nat, _type: NatType) : NatBlock{
+    /// Transforms a dynamically sized [Nat]() value from the base lib to a [NatBlock](#natBlock)
+    public func fromNat(n : Nat, _type: NatSize) : NatBlock{
         switch(_type){
             case (#Nat8)     #Nat8(Nat8.fromNat(n));
             case (#Nat16) #Nat16(Nat16.fromNat(n));
@@ -144,7 +165,7 @@ module {
             case (#Nat64) #Nat64(Nat64.fromNat(n));
         };
     };
-    
+
     public func toNat(_n: NatBlock) : Nat{
         switch(_n){
             case (#Nat8(n))   Nat8.toNat(n);
@@ -262,6 +283,7 @@ module {
         }
     };
 
+    /// Returns the value of a [NatBlock] as a binary text
     public func toBinaryText(_n : NatBlock) : Text {
         var binary = "";
 
@@ -323,6 +345,7 @@ module {
         Nat8.fromNat(Nat64.toNat(n64))
     };
 
+    /// Returns the bytes for a [NatBlock](#natBlock)
     public func toBytes(_n : NatBlock) : [Nat8]{
         switch(_n){
             case (#Nat8(n))  [n];
