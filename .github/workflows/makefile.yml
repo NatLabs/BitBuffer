@@ -1,26 +1,28 @@
 name: Makefile CI
 
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+on: [push, pull_request]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+    build:
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
-      - name: "install vessel"
-        run: |
-          mkdir /home/runner/bin
-          echo "/home/runner/bin" >> $GITHUB_PATH
-          wget --output-document /home/runner/bin/vessel https://github.com/dfinity/vessel/releases/download/v0.6.3/vessel-linux64
-          chmod +x /home/runner/bin/vessel
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions/setup-node@v3
+              with:
+                node-version: 14
+            - uses: aviate-labs/setup-dfx@v0.2.3
+              with:
+                vessel-version: 0.6.3
+                dfx-version: 0.12.1
 
-      - name: Run Tests
-        run: make test
+            - name: install mops
+              run: |
+                  npm --yes -g i ic-mops
+                  mops i
 
-      - name: Generate Docs
-        run: make docs
+            - name: Detect Warnings
+              run: make no-warn
+
+            - name: Run Tests
+              run: mops test

@@ -1,0 +1,4 @@
+[dependencies]
+base = "0.8.0"
+StableBuffer = "https://github.com/canscale/StableBuffer#v0.2.0"
+itertools = "0.1.1"

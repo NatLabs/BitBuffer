@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "dfx": "0.10.0",
+  "dfx": "0.13.1",
   "defaults": {
     "build": {
-      "packtool": "vessel sources",
+      "packtool": "mops sources",
       "args": ""
     }
   },
