@@ -46,7 +46,7 @@ func bitbuffer_tests<NatX>(title : Text, NatLib: BitBuffer.NatLib<NatX>) : Actor
                 },
             ),
             it(
-                "set",
+                "put",
                 do {
                     let bitbuffer = BitBuffer.init(NatLib, 5, false);
 
@@ -62,42 +62,6 @@ func bitbuffer_tests<NatX>(title : Text, NatLib: BitBuffer.NatLib<NatX>) : Actor
                     ]);
                 },
             ),
-            // it(
-            //     "fromIter",
-            //     do {
-            //         let bits = [true, false, false, true, false];
-
-            //         let bitbuffer = SBB.fromIter(#Nat8, bits.vals());
-
-            //         assertAllTrue([
-            //             bitbuffer.size() == 5,
-            //             bitbuffer.get(0) == true,
-            //             bitbuffer.get(1) == false,
-            //             bitbuffer.get(2) == false,
-            //             bitbuffer.get(3) == true,
-            //             bitbuffer.get(4) == false,
-            //         ]);
-            //     },
-            // ),
-            // it(
-            //     "toIter",
-            //     do {
-            //         let bitbuffer = BitBuffer.init(NatLib, 5, true);
-
-            //         bitbuffer.put(0, true);
-            //         bitbuffer.put(3, true);
-
-            //         assertTrue(
-            //             Iter.toArray(SBB.toIter(bitbuffer)) == [
-            //                 true,
-            //                 false,
-            //                 false,
-            //                 true,
-            //                 false,
-            //             ],
-            //         );
-            //     },
-            // ),
             it(
                 "add",
                 do {
@@ -138,46 +102,23 @@ func bitbuffer_tests<NatX>(title : Text, NatLib: BitBuffer.NatLib<NatX>) : Actor
                     );
                 },
             ),
-            // it(
-            //     "removeLast",
-            //     do {
-            //         let bitbuffer = BitBuffer.BitBuffer(Nat8, 3);
+            it(
+                "removeLast",
+                do {
+                    let bitbuffer = BitBuffer.BitBuffer(Nat8, 3);
 
-            //         bitbuffer.add(true);
-            //         bitbuffer.add(false);
-            //         bitbuffer.add(true);
+                    bitbuffer.add(true);
+                    bitbuffer.add(false);
+                    bitbuffer.add(true);
 
-            //         assertAllTrue([
-            //             SBB.removeLast(bitbuffer) == ?true,
-            //             SBB.removeLast(bitbuffer) == ?false,
-            //             SBB.removeLast(bitbuffer) == ?true,
-            //             SBB.removeLast(bitbuffer) == null,
-            //         ]);
-            //     },
-            // ),
-            // it(
-            //     "setAll",
-            //     do {
-            //         let bitbuffer = BitBuffer.BitBuffer(Nat8, 8);
-
-            //         bitbuffer.add(false);
-            //         bitbuffer.add(true);
-            //         bitbuffer.add(false);
-
-            //         SBB.setAll(bitbuffer, true);
-
-            //         let firstCheckIsTrue = bitbuffer.get(0) and bitbuffer.get(1) and bitbuffer.get(2);
-
-            //         SBB.setAll(bitbuffer, false);
-
-            //         let secondCheckIsFalse = not bitbuffer.get(0) and not bitbuffer.get(1) and not bitbuffer.get(2);
-
-            //         assertAllTrue([
-            //             firstCheckIsTrue,
-            //             secondCheckIsFalse,
-            //         ]);
-            //     },
-            // ),
+                    assertAllTrue([
+                        bitbuffer.removeLast() == ?true,
+                        bitbuffer.removeLast() == ?false,
+                        bitbuffer.removeLast() == ?true,
+                        bitbuffer.removeLast() == null,
+                    ]);
+                },
+            ),
             it(
                 "invert",
                 do {
@@ -341,18 +282,80 @@ let success = run([
         "BitBuffer",
         [
             describe("BitBuffer with Nat8 word type", [
+                it("getBits", do{
+                    let bitbuffer = BitBuffer.fromWords<Nat8>(Nat8, [21, 224, 31]);
+                    let res = [
+                        bitbuffer.getBits(0, 8),
+                        bitbuffer.getBits(8, 5),
+                        bitbuffer.getBits(13, 8),
+                    ];
+                    Debug.print("res: ++ " # debug_show res);
+                    Debug.print(debug_show BitBuffer.toWords(bitbuffer));
+                    assertAllTrue([res == [21, 0, 255]])
+                }),
+                it("putBits", do {
+                    let bitbuffer = BitBuffer.fromWords<Nat8>(Nat8, [0, 0, 0]);
+
+                    bitbuffer.putBits(0, 5, 21);
+                    bitbuffer.putBits(5, 8, 255);
+                    bitbuffer.putBits(13, 7, 64);
+
+                    assertAllTrue([
+                        bitbuffer.getBits(0, 5) == 21,
+                        bitbuffer.getBits(5, 8) == 255,
+                        bitbuffer.getBits(13, 7) == 64,
+                    ])
+                }),
                 it("addBits", do {
                     let bitbuffer = BitBuffer.BitBuffer<Nat8>(Nat8, 8);
                     bitbuffer.addBits(8, 21);
                     bitbuffer.addBits(5, 0);
                     bitbuffer.addBits(8, 255);
 
-                    Debug.print(debug_show bitbuffer.size());
-                    Debug.print(debug_show Iter.toArray(bitbuffer.words()));
                     assertAllTrue([
                         bitbuffer.size() == 21,
-                        Iter.toArray(bitbuffer.words()) == [21, 7, 31],
+                        Iter.toArray(bitbuffer.words()) == [21, 224, 31],
                     ]);
+                }),
+
+                it("fromWords", do{
+                    let bitbuffer = BitBuffer.fromWords<Nat8>(Nat8, [21, 224, 31]);
+                    assertAllTrue([
+                        bitbuffer.size() == 24,
+                        BitBuffer.toWords(bitbuffer) == [21, 224, 31],
+                    ])
+                }),
+                it("insertBits", do{
+                    let bitbuffer = BitBuffer.BitBuffer<Nat8>(Nat8, 21);
+
+                    Debug.print("insertBits");
+                    let res = [
+                        do {
+                            bitbuffer.addBits(2, 3);
+                            Debug.print("test: getBits(0, 2): " # debug_show bitbuffer.getBits(0, 2));
+                            bitbuffer.getBits(0, 2) == 3 
+                        },
+                        bitbuffer.size() == 2,
+                        do {
+                            bitbuffer.insertBits(1, 3, 2);
+                            Debug.print("test: getBits(1, 3): " # debug_show bitbuffer.getBits(1, 3));
+                            bitbuffer.getBits(1, 3) == 2
+                        },
+                        bitbuffer.size() == 5,
+
+                        do{
+                            bitbuffer.insertBits(0, 3, 0);
+                            Debug.print("test: getBits(0, 3): " # debug_show bitbuffer.getBits(0, 3));
+                            bitbuffer.getBits(0, 3) == 0
+                        },
+                        bitbuffer.size() == 8,
+
+                    ];
+
+                    Debug.print("res" # debug_show res);
+
+                    assertAllTrue(res)
+
                 })
             ]),
             // bitbuffer_tests<Nat8>("With Nat8 Word", Nat8),
