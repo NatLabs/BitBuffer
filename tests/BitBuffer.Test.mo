@@ -317,7 +317,16 @@ let success = run([
                         Iter.toArray(bitbuffer.words()) == [21, 224, 31],
                     ]);
                 }),
+                it("addByte", do{
+                    let bitbuffer = BitBuffer.BitBuffer<Nat8>(Nat8, 8);
+                    bitbuffer.addByte(21);
+                    bitbuffer.addByte(255);
 
+                    assertAllTrue([
+                        bitbuffer.size() == 16,
+                        Iter.toArray(bitbuffer.words()) == [21, 255],
+                    ]);
+                }),
                 it("fromWords", do{
                     let bitbuffer = BitBuffer.fromWords<Nat8>(Nat8, [21, 224, 31]);
                     assertAllTrue([

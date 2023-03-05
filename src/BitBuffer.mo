@@ -4,6 +4,7 @@ import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
+import Nat8 "mo:base/Nat8";
 
 import Itertools "mo:itertools/Iter";
 
@@ -22,10 +23,10 @@ module {
         let init_buffer_capacity = (init_bit_capacity / word_size) + 1;
 
         let buffer = Buffer.Buffer<NatX>(init_buffer_capacity);
-        var bits_size : Nat = 0;
+        var total_bits : Nat = 0;
 
         /// Returns the number of bits in the buffer
-        public func size() : Nat { bits_size };
+        public func size() : Nat { total_bits };
 
         public func allocated() : Nat {
             buffer.size() * word_size;
@@ -57,7 +58,7 @@ module {
 
         /// Returns the bit at the given index
         public func get(index : Nat) : Bool {
-            if (index >= bits_size) {
+            if (index >= total_bits) {
                 Debug.trap("BitBuffer get(): Index out of bounds");
             };
 
@@ -67,7 +68,7 @@ module {
         };
 
         public func getBits(i : Nat, n : Nat) : NatX {
-
+            
             let (word_index, bit_index) = get_pos(i);
             let word = buffer.get(word_index);
 
@@ -86,9 +87,20 @@ module {
 
         };
 
+        /// Gets the byte from the given index
+        public func getByte(i: Nat): Nat8 {
+            if (i + 8 > total_bits) {
+                Debug.trap("BitBuffer getByte(): Index out of bounds");
+            };
+
+            let byte = getBits(i, 8);
+            let nat = natlib.toNat(byte);
+            Nat8.fromNat(nat);
+        };
+
         /// Sets the bit at the given index
         public func put(i : Nat, bit : Bool) {
-            if (i >= bits_size) {
+            if (i >= total_bits) {
                 Debug.trap("BitBuffer put(): Index out of bounds");
             };
 
@@ -125,7 +137,7 @@ module {
 
         /// Sets the bits at the given index
         public func putBits(i : Nat, n : Nat, bits : NatX) {
-            if (i >= bits_size) {
+            if (i >= total_bits) {
                 Debug.trap("BitBuffer putBits(): Index out of bounds");
             };
 
@@ -133,7 +145,7 @@ module {
                 Debug.trap("BitBuffer putBits(): Number of bits to add is too large");
             };
 
-            if (i + n > bits_size) {
+            if (i + n > total_bits) {
                 Debug.trap("BitBuffer putBits(): Not enough bits in buffer");
             };
 
@@ -151,7 +163,7 @@ module {
         };
 
         public func insertBits(i : Nat, n : Nat, bits : NatX) {
-            if (i > bits_size) {
+            if (i > total_bits) {
                 Debug.trap("BitBuffer insertBits(): Index out of bounds");
             };
 
@@ -159,12 +171,12 @@ module {
                 Debug.trap("BitBuffer insertBits(): Number of bits to insert is too large");
             };
 
-            if (bits_size + n > self.allocated()) {
+            if (total_bits + n > self.allocated()) {
                 buffer.add(natlib.fromNat(0));
             };
 
             let (word_index, bit_index) = get_pos(i);
-            var elems_after_index = (bits_size - i) : Nat;
+            var elems_after_index = (total_bits - i) : Nat;
 
             while (elems_after_index > 0) {
                 let shift_n = Nat.min(elems_after_index, word_size);
@@ -177,7 +189,7 @@ module {
             };
 
             _putBits(i, n, bits);
-            bits_size += n;
+            total_bits += n;
         };
 
         /// Adds a bit to the end of the buffer
@@ -197,7 +209,7 @@ module {
         /// assert bitbuffer.get(2) == true;
         /// ```
         public func add(bit : Bool) {
-            let (word_index, bit_index) = get_pos(bits_size);
+            let (word_index, bit_index) = get_pos(total_bits);
 
             if (word_index >= buffer.size()) {
                 buffer.add(natlib.fromNat(0));
@@ -212,7 +224,7 @@ module {
             };
 
             buffer.put(word_index, new_word);
-            bits_size += 1;
+            total_bits += 1;
         };
 
         /// Adds bits to the end of the buffer up to the word_size
@@ -221,14 +233,26 @@ module {
                 Debug.trap("BitBuffer addBits(): Number of bits to add is too large");
             };
 
-            let bit_index = bits_size % word_size;
+            let bit_index = total_bits % word_size;
 
             if (bit_index == 0 or (bit_index + n) > word_size) {
                 buffer.add(natlib.fromNat(0));
             };
 
-            _putBits(bits_size, n, bits);
-            bits_size += n;
+            _putBits(total_bits, n, bits);
+            total_bits += n;
+        };
+
+        public func addByte(n: Nat8){
+            let nat = Nat8.toNat(n);
+            let bits = natlib.fromNat(nat);
+            addBits(8, bits);
+        };
+
+        public func addBytes(bytes: [Nat8]){
+            for (byte in bytes.vals()) {
+                addByte(byte);
+            };
         };
 
         /// Appends the bits from the given buffer to the end of this buffer
@@ -243,11 +267,11 @@ module {
         };
 
         public func removeLast() : ?Bool {
-            if (bits_size == 0) {
+            if (total_bits == 0) {
                 return null;
             };
 
-            ?remove(bits_size - 1);
+            ?remove(total_bits - 1);
         };
 
         public func remove(i: Nat) : Bool {
@@ -260,16 +284,16 @@ module {
 
             var j = i + n;
 
-            while (j < bits_size) {
-                let nbits = Nat.min(bits_size - j, word_size);
+            while (j < total_bits) {
+                let nbits = Nat.min(total_bits - j, word_size);
                 let word = getBits(j, nbits);
                 _putBits(j - n, nbits, word);
                 j += nbits;
             };
 
-            bits_size -= n;
+            total_bits -= n;
 
-            if ((self.allocated() - bits_size : Nat) > word_size){
+            if ((self.allocated() - total_bits : Nat) > word_size){
                 ignore buffer.removeLast();
             };
 
@@ -288,7 +312,7 @@ module {
         /// Removes all the bits in the buffer
         public func clear() {
             buffer.clear();
-            bits_size := 0;
+            total_bits := 0;
         };
 
         public func clone() : BitBuffer<NatX> {
@@ -301,7 +325,7 @@ module {
 
         public func vals() : Iter<Bool> {
             Iter.map(
-                Itertools.range(0, bits_size),
+                Itertools.range(0, total_bits),
                 func(i : Nat) : Bool { self.get(i) },
             );
         };
