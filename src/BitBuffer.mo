@@ -32,6 +32,10 @@ module {
         /// Returns the number of bits in the buffer
         public func size() : Nat { total_bits };
 
+        /// Returns the max number of bits in each word
+        public func wordSize() : Nat { word_size };
+
+
         public func allocated() : Nat {
             buffer.size() * word_size;
         };
@@ -450,7 +454,7 @@ module {
     };
 
     public func isWordAligned<NatX>(bitbuffer: BitBuffer<NatX>) : Bool {
-        bitbuffer.size() % NatLib.bits(bitbuffer.natlib) == 0;
+        bitbuffer.size() % bitbuffer.wordSize() == 0;
     };
 
 };
