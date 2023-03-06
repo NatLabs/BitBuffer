@@ -304,6 +304,25 @@ module {
             bits
         };
 
+        public func pad(n: Nat){
+            let zero = natlib.fromNat(0);
+            addBits(n, zero);
+        };
+
+        public func byteAlign(){
+            if (not isByteAligned(self)){
+                let padding = (8 - (total_bits % 8)) : Nat;
+                pad(padding);
+            }
+        };
+
+        public func wordAlign(){
+            if (not isWordAligned(self)){
+                let padding = (word_size - (total_bits % word_size)) : Nat;
+                pad(padding);
+            }
+        };
+
         /// Flips all the bits in the buffer
         public func invert() {
             for (i in Itertools.range(0, buffer.size())) {
@@ -409,7 +428,7 @@ module {
 
     public func withNat64Word() : BitBuffer<Nat64> {
         BitBuffer<Nat64>(Nat64, 64);
-    };  
+    };
 
     public func toBytes<NatX>(bitbuffer: BitBuffer<NatX>) : [Nat8] {
         let size = (bitbuffer.size() + (8 - 1 : Nat)) / 8;
@@ -424,6 +443,14 @@ module {
 
     public func toWords<NatX>(bitbuffer: BitBuffer<NatX>) : [NatX] {
         Iter.toArray(bitbuffer.words());
+    };
+
+    public func isByteAligned<NatX>(bitbuffer: BitBuffer<NatX>) : Bool {
+        bitbuffer.size() % 8 == 0;
+    };
+
+    public func isWordAligned<NatX>(bitbuffer: BitBuffer<NatX>) : Bool {
+        bitbuffer.size() % NatLib.bits(bitbuffer.natlib) == 0;
     };
 
 };
