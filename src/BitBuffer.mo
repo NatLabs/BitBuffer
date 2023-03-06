@@ -1,10 +1,14 @@
 /// A dynamically sized buffer of bits that can be used to store arbitrary data in a compact form.
 
+import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
+import Nat16 "mo:base/Nat16";
+import Nat32 "mo:base/Nat32";
+import Nat64 "mo:base/Nat64";
 
 import Itertools "mo:itertools/Iter";
 
@@ -89,11 +93,11 @@ module {
 
         /// Gets the byte from the given index
         public func getByte(i: Nat): Nat8 {
-            if (i + 8 > total_bits) {
+            if (i >= total_bits) {
                 Debug.trap("BitBuffer getByte(): Index out of bounds");
             };
 
-            let byte = getBits(i, 8);
+            let byte = getBits(i, Nat.min(8, total_bits - i));
             let nat = natlib.toNat(byte);
             Nat8.fromNat(nat);
         };
@@ -369,6 +373,16 @@ module {
         bitbuffer;
     };
 
+    public func fromBytes<NatX>(natlib : NatLib<NatX>, bytes : [Nat8]) : BitBuffer<NatX> {
+        let bitbuffer = BitBuffer<NatX>(natlib, bytes.size() * 8);
+
+        for (byte in bytes.vals()) {
+            bitbuffer.addByte(byte);
+        };
+
+        bitbuffer;
+    };
+
     public func fromWords<NatX>(natlib : NatLib<NatX>, words : [NatX]) : BitBuffer<NatX> {
         let word_bit_size = NatLib.bits(natlib);
         let nbits = words.size() * word_bit_size;
@@ -379,6 +393,33 @@ module {
         };
 
         bitbuffer;
+    };
+    
+    public func withNat8Word() : BitBuffer<Nat8> {
+        BitBuffer<Nat8>(Nat8, 8);
+    };
+
+    public func withNat16Word() : BitBuffer<Nat16> {
+        BitBuffer<Nat16>(Nat16, 16);
+    };
+
+    public func withNat32Word() : BitBuffer<Nat32> {
+        BitBuffer<Nat32>(Nat32, 32);
+    };
+
+    public func withNat64Word() : BitBuffer<Nat64> {
+        BitBuffer<Nat64>(Nat64, 64);
+    };  
+
+    public func toBytes<NatX>(bitbuffer: BitBuffer<NatX>) : [Nat8] {
+        let size = (bitbuffer.size() + (8 - 1 : Nat)) / 8;
+
+        Array.tabulate(
+            size,
+            func (i : Nat) : Nat8 {
+                bitbuffer.getByte(i * 8);
+            },
+        )
     };
 
     public func toWords<NatX>(bitbuffer: BitBuffer<NatX>) : [NatX] {
