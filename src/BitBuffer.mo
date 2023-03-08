@@ -418,20 +418,20 @@ module {
         bitbuffer;
     };
     
-    public func withNat8Word() : BitBuffer<Nat8> {
-        BitBuffer<Nat8>(Nat8, 8);
+    public func withNat8Word(init_capacity: Nat) : BitBuffer<Nat8> {
+        BitBuffer<Nat8>(Nat8, init_capacity);
     };
 
-    public func withNat16Word() : BitBuffer<Nat16> {
-        BitBuffer<Nat16>(Nat16, 16);
+    public func withNat16Word(init_capacity: Nat) : BitBuffer<Nat16> {
+        BitBuffer<Nat16>(Nat16, init_capacity);
     };
 
-    public func withNat32Word() : BitBuffer<Nat32> {
-        BitBuffer<Nat32>(Nat32, 32);
+    public func withNat32Word(init_capacity : Nat) : BitBuffer<Nat32> {
+        BitBuffer<Nat32>(Nat32, init_capacity);
     };
 
-    public func withNat64Word() : BitBuffer<Nat64> {
-        BitBuffer<Nat64>(Nat64, 64);
+    public func withNat64Word(init_capacity : Nat) : BitBuffer<Nat64> {
+        BitBuffer<Nat64>(Nat64, init_capacity);
     };
 
     public func toBytes<NatX>(bitbuffer: BitBuffer<NatX>) : [Nat8] {
