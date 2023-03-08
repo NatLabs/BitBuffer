@@ -1,4 +1,4 @@
-/// A dynamically sized buffer of bits that can be used to store arbitrary data in a compact form.
+/// A Buffer for bit-level manipulation.
 
 import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
@@ -24,7 +24,7 @@ module {
         let max_n : NatX = NatLib.getMax(natlib);
         let word_size : Nat = NatLib.bits(natlib);
 
-        let init_buffer_capacity = (init_bit_capacity / word_size) + 1;
+        let init_buffer_capacity = (init_bit_capacity + (word_size - 1 : Nat) / word_size);
 
         let buffer = Buffer.Buffer<NatX>(init_buffer_capacity);
         var total_bits : Nat = 0;
@@ -32,30 +32,31 @@ module {
         /// Returns the number of bits in the buffer
         public func size() : Nat { total_bits };
 
-        /// Returns the max number of bits in each word
+        /// Returns the number of bits in each word
         public func wordSize() : Nat { word_size };
 
-
-        public func allocated() : Nat {
+        func allocated() : Nat {
             buffer.size() * word_size;
         };
 
         /// Returns the number of bits that can be stored in the buffer without
-        /// reallocating
+        /// reallocation
         public func capacity() : Nat {
             buffer.capacity() * word_size;
         };
 
-        /// Returns the number of non-zero bits in the buffer
-        public func bitcount() : Nat {
-            var cnt : NatX = natlib.fromNat(0);
+        /// Counts the number of bits that match the given bit
+        public func bitcount(bit: Bool) : Nat {
+            var cnt_x : NatX = natlib.fromNat(0);
 
             for (word in buffer.vals()) {
                 let n = natlib.bitcountNonZero(word);
-                cnt := natlib.add(cnt, n);
+                cnt_x := natlib.add(cnt_x, n);
             };
 
-            natlib.toNat(cnt);
+            let cnt = natlib.toNat(cnt_x);
+
+            if (bit) { cnt } else { total_bits - cnt };
         };
 
         // Returns the position of the word in the buffer
@@ -74,7 +75,7 @@ module {
             let word = buffer.get(word_index);
             natlib.bittest(word, bit_index);
         };
-
+        
         public func getBits(i : Nat, n : Nat) : NatX {
             
             let (word_index, bit_index) = get_pos(i);
@@ -179,7 +180,7 @@ module {
                 Debug.trap("BitBuffer insertBits(): Number of bits to insert is too large");
             };
 
-            if (total_bits + n > self.allocated()) {
+            if (total_bits + n > allocated()) {
                 buffer.add(natlib.fromNat(0));
             };
 
@@ -287,7 +288,7 @@ module {
             natlib.toNat(bit) == 1
         };
 
-        public func removeBits(i: Nat, n: Nat) : NatX{
+        public func removeBits(i: Nat, n: Nat) : NatX {
             let bits = getBits(i, n);
 
             var j = i + n;
@@ -301,7 +302,7 @@ module {
 
             total_bits -= n;
 
-            if ((self.allocated() - total_bits : Nat) > word_size){
+            if ((allocated() - total_bits : Nat) > word_size){
                 ignore buffer.removeLast();
             };
 
@@ -447,6 +448,10 @@ module {
 
     public func toWords<NatX>(bitbuffer: BitBuffer<NatX>) : [NatX] {
         Iter.toArray(bitbuffer.words());
+    };
+
+    public func bitcountNonZero<NatX>(bitbuffer: BitBuffer<NatX>) : Nat {
+        bitbuffer.bitcount(true);
     };
 
     public func isByteAligned<NatX>(bitbuffer: BitBuffer<NatX>) : Bool {

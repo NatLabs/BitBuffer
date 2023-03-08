@@ -15,6 +15,3 @@
 # frontend code
 node_modules/
 dist/
-
-notes.md
-src/StableBitBuffer.mo

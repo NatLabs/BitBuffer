@@ -1,3 +1,10 @@
+[package]
+name = "bitbuffer"
+version = "0.0.1"
+description = "A buffer for bit and byte level manipulation"
+repository = "https://github.com/NatLabs/BitBuffer"
+keywords = ["bit", "buffer", "byte"]
+
 [dependencies]
 base = "0.8.1"
 StableBuffer = "https://github.com/canscale/StableBuffer#v0.2.0"
