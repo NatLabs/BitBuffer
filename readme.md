@@ -9,5 +9,5 @@ mops add bitbuffer
 
 ## Documentation
 The documentation is available in the following formats:
-- [markdown](./docs/index.md)
+- [markdown](https://github.com/NatLabs/BitBuffer/blob/main/docs/index.md)
 - [web](https://natlabs.github.io/BitBuffer)

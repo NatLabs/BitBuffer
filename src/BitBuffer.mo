@@ -102,9 +102,16 @@ module {
                 Debug.trap("BitBuffer getByte(): Index out of bounds");
             };
 
+            let nbits = Nat.min(8, total_bits - i);
+
+            Debug.print("getByte(" # debug_show(i) # ") nbits: " # debug_show(nbits));
+            
             let byte = getBits(i, Nat.min(8, total_bits - i));
-            let nat = natlib.toNat(byte);
-            Nat8.fromNat(nat);
+            Debug.print("byte: " # natlib.toText(byte));
+            let nat = natlib.toNat(byte) % 256;
+            
+            Debug.print("nat: " # Nat.toText(nat));
+            Nat8.fromNat(nat % (2 ** 8));
         };
 
         /// Sets the bit at the given index

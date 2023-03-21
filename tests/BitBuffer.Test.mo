@@ -102,6 +102,9 @@ func bitbuffer_tests<NatX>(title : Text, NatLib: BitBuffer.NatLib<NatX>) : Actor
                     );
                 },
             ),
+            it("getBits", do {
+                true
+            }),
             it(
                 "removeLast",
                 do {
