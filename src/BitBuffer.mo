@@ -1,4 +1,4 @@
-/// A Buffer for bit-level manipulation.
+/// A Buffer for bit-level and byte-level manipulation.
 
 import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
@@ -11,6 +11,9 @@ import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 
 import Itertools "mo:itertools/Iter";
+import BufferDeque "mo:BufferDeque/BufferDeque";
+import Common "mo:BufferDeque/internal/Common";
+
 
 import NatLib "NatLib";
 
@@ -18,7 +21,7 @@ module {
     type Buffer<A> = Buffer.Buffer<A>;
     type Iter<A> = Iter.Iter<A>;
     public type NatLib<A> = NatLib.NatLib<A>;
-
+    
     public class BitBuffer<NatX>(natlib : NatLib<NatX>, init_bit_capacity : Nat) = self {
 
         let max_n : NatX = NatLib.getMax(natlib);

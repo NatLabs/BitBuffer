@@ -3,9 +3,13 @@ name = "bitbuffer"
 version = "0.0.2"
 description = "A buffer for bit level manipulation"
 repository = "https://github.com/NatLabs/BitBuffer"
-keywords = ["bits", "buffer", "byte"]
+keywords = [ "bits", "buffer", "byte" ]
 
 [dependencies]
 base = "0.8.1"
 StableBuffer = "https://github.com/canscale/StableBuffer#v0.2.0"
 itertools = "0.1.1"
+BufferDeque = "https://github.com/NatLabs/BufferDeque#master"
+
+[dev-dependencies]
+test = "1.0.1"

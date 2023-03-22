@@ -29,8 +29,7 @@ func bitbuffer_tests<NatX>(title : Text, NatLib: BitBuffer.NatLib<NatX>) : Actor
                 "init",
                 do {
                     let bitbuffer = BitBuffer.init(NatLib, 64, true);
-
-                    assertTrue(bitbuffer.bitcount() == 64);
+                    assertTrue(bitbuffer.bitcount(true) == 64);
                 },
             ),
             it(
