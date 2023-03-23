@@ -325,12 +325,18 @@ module {
         bitbuffer
     };
 
-    public func addBytes(bitbuffer : BitBuffer, bytes : Iter<Nat8>) {
-        for (byte in bytes) {
+    public func addBytes(bitbuffer : BitBuffer, bytes: [Nat8]) {
+        for (byte in bytes.vals()) {
             addByte(bitbuffer, byte);
         };
     };
 
+    public func addBytesIter(bitbuffer: BitBuffer, bytes : Iter<Nat8>){
+        for (byte in bytes) {
+            addByte(bitbuffer, byte);
+        };
+    };
+    
     public func getBytes(bitbuffer : BitBuffer, bit_index : Nat, n : Nat) : [Nat8] {
         Array.tabulate(
             n,
