@@ -12,17 +12,11 @@ let
 
 let overrides = [
     { 
-       name = "Itertools", 
+       name = "buffer-deque", 
        version = "main", 
-       repo = "https://github.com/NatLabs/Itertools.mo", 
+       repo = "https://github.com/NatLabs/BufferDeque", 
        dependencies = ["base"] : List Text
     },
-    { 
-       name = "StableBuffer", 
-       version = "v0.2.0", 
-       repo = "https://github.com/canscale/StableBuffer", 
-       dependencies = ["base"] : List Text
-    }
 ] : List Package
 
 in  aviate_labs # vessel_package_set # overrides

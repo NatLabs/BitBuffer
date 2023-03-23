@@ -1,42 +1,43 @@
 # BitBuffer
-A Buffer for bit-level manipulation.
+A Buffer for bit-level and byte-level manipulation.
 
-## Type `NatLib`
+## Class `BitBuffer`
+
 ``` motoko no-repl
-type NatLib<A> = NatLib.NatLib<A>
+class BitBuffer(init_bits : Nat)
 ```
 
 
-## Class `BitBuffer<NatX>`
-
+### Function `bitSize`
 ``` motoko no-repl
-class BitBuffer<NatX>(natlib : NatLib<NatX>, init_bit_capacity : Nat)
-```
-
-
-### Function `size`
-``` motoko no-repl
-func size() : Nat
+func bitSize() : Nat
 ```
 
 Returns the number of bits in the buffer
 
 
-### Function `wordSize`
+### Function `bitCapacity`
 ``` motoko no-repl
-func wordSize() : Nat
+func bitCapacity() : Nat
 ```
 
-Returns the number of bits in each word
+Returns the max number of bits the buffer can hold without resizing
 
 
-### Function `capacity`
+### Function `byteSize`
 ``` motoko no-repl
-func capacity() : Nat
+func byteSize() : Nat
 ```
 
-Returns the number of bits that can be stored in the buffer without
-reallocation
+Returns the number of bytes in the buffer
+
+
+### Function `byteCapacity`
+``` motoko no-repl
+func byteCapacity() : Nat
+```
+
+Returns the max number of bytes the buffer can hold without resizing
 
 
 ### Function `bitcount`
@@ -44,155 +45,56 @@ reallocation
 func bitcount(bit : Bool) : Nat
 ```
 
-Counts the number of bits that match the given bit
+Returns the number of bits that match the given bit
 
 
-### Function `get`
+### Function `addBit`
 ``` motoko no-repl
-func get(index : Nat) : Bool
+func addBit(bit : Bool)
 ```
 
-Returns the bit at the given index
-
-
-### Function `getBits`
-``` motoko no-repl
-func getBits(i : Nat, n : Nat) : NatX
-```
-
-
-
-### Function `getByte`
-``` motoko no-repl
-func getByte(i : Nat) : Nat8
-```
-
-Gets the byte from the given index
-
-
-### Function `put`
-``` motoko no-repl
-func put(i : Nat, bit : Bool)
-```
-
-Sets the bit at the given index
-
-
-### Function `putBits`
-``` motoko no-repl
-func putBits(i : Nat, n : Nat, bits : NatX)
-```
-
-Sets the bits at the given index
-
-
-### Function `insert`
-``` motoko no-repl
-func insert(i : Nat, bit : Bool)
-```
-
-
-
-### Function `insertBits`
-``` motoko no-repl
-func insertBits(i : Nat, n : Nat, bits : NatX)
-```
-
-
-
-### Function `add`
-``` motoko no-repl
-func add(bit : Bool)
-```
-
-Adds a bit to the end of the buffer
-```motoko
-import Nat32 "mo:base/Nat32";
-import BitBuffer "mo:bitbuffer/BitBuffer";
-
-let bitbuffer = BitBuffer.BitBuffer<Nat32>(Nat32, 3);
-
-bitbuffer.add(true);
-bitbuffer.add(false);
-bitbuffer.add(true);
-
-assert bitbuffer.size() == 3;
-assert bitbuffer.get(0) == true;
-assert bitbuffer.get(1) == false;
-assert bitbuffer.get(2) == true;
-```
+Adds a single bit to the bitbuffer
 
 
 ### Function `addBits`
 ``` motoko no-repl
-func addBits(n : Nat, bits : NatX)
+func addBits(n : Nat, bits : Nat)
 ```
 
-Adds bits to the end of the buffer up to the word_size
+Adds the given bits to the bitbuffer
 
 
-### Function `addByte`
+### Function `getBit`
 ``` motoko no-repl
-func addByte(n : Nat8)
+func getBit(i : Nat) : Bool
 ```
 
+Returns the bit at the given index as a `Bool`
 
 
-### Function `addBytes`
+### Function `getBits`
 ``` motoko no-repl
-func addBytes(bytes : [Nat8])
+func getBits(i : Nat, n : Nat) : Nat
 ```
 
+Returns the bits at the given index as a `Nat`
 
 
-### Function `append`
+### Function `dropBit`
 ``` motoko no-repl
-func append(other : BitBuffer<NatX>)
+func dropBit()
 ```
 
-Appends the bits from the given buffer to the end of this buffer
+Drops the first bit from the buffer.
 
 
-### Function `removeLast`
+### Function `dropBits`
 ``` motoko no-repl
-func removeLast() : ?Bool
+func dropBits(n : Nat)
 ```
 
-
-
-### Function `remove`
-``` motoko no-repl
-func remove(i : Nat) : Bool
-```
-
-
-
-### Function `removeBits`
-``` motoko no-repl
-func removeBits(i : Nat, n : Nat) : NatX
-```
-
-
-
-### Function `pad`
-``` motoko no-repl
-func pad(n : Nat)
-```
-
-
-
-### Function `byteAlign`
-``` motoko no-repl
-func byteAlign()
-```
-
-
-
-### Function `wordAlign`
-``` motoko no-repl
-func wordAlign()
-```
-
+Drops the first `n` bits from the bitbuffer.
+Trap if `n` is greater than the number of bits in the bitbuffer.
 
 
 ### Function `invert`
@@ -208,103 +110,214 @@ Flips all the bits in the buffer
 func clear()
 ```
 
-Removes all the bits in the buffer
 
 
-### Function `clone`
+### Function `bits`
 ``` motoko no-repl
-func clone() : BitBuffer<NatX>
+func bits() : Iter<Bool>
 ```
 
+Returns an iterator over the bits in the buffer
 
 
-### Function `words`
+### Function `bytes`
 ``` motoko no-repl
-func words() : Iter<NatX>
+func bytes() : Iter<Nat8>
 ```
 
+Returns an iterator over the bytes in the buffer
 
 
-### Function `vals`
+### Function `byteAlign`
 ``` motoko no-repl
-func vals() : Iter<Bool>
+func byteAlign()
 ```
 
+Aligns the buffer to the next byte boundary
+
+## Function `new`
+``` motoko no-repl
+func new() : BitBuffer
+```
+
+======================== Instantiation Functions ========================
+Initializes an empty bitbuffer
+
+## Function `withByteCapacity`
+``` motoko no-repl
+func withByteCapacity(byte_capacity : Nat) : BitBuffer
+```
+
+Initializes a bitbuffer with the given byte capacity
 
 ## Function `init`
 ``` motoko no-repl
-func init<NatX>(natlib : NatLib<NatX>, buffer_size : Nat, val : Bool) : BitBuffer<NatX>
+func init(bit_capacity : Nat, ones : Bool) : BitBuffer
 ```
 
+Initializes a bitbuffer with `bit_capacity` bits and fills it with `ones` if `true` or `zeros` if `false`.
 
 ## Function `tabulate`
 ``` motoko no-repl
-func tabulate<NatX>(natlib : NatLib<NatX>, buffer_size : Nat, f : (Nat) -> Bool) : BitBuffer<NatX>
+func tabulate(bit_capacity : Nat, f : (Nat) -> Bool) : BitBuffer
+```
+
+Initializes a bitbuffer with `bit_capacity` bits and fills it with the bits returned by the function `f`.
+
+## Function `isByteAligned`
+``` motoko no-repl
+func isByteAligned(bitbuffer : BitBuffer) : Bool
+```
+
+Checks if the bits in the buffer are byte aligned
+
+## Function `bitcountNonZero`
+``` motoko no-repl
+func bitcountNonZero(bitbuffer : BitBuffer) : Nat
+```
+
+Returns the number of bits that are set to `true` or `1` in the buffer
+
+## Function `addByte`
+``` motoko no-repl
+func addByte(bitbuffer : BitBuffer, byte : Nat8)
+```
+
+========================== Byte operations ==================================
+
+## Function `getByte`
+``` motoko no-repl
+func getByte(bitbuffer : BitBuffer, bit_index : Nat) : Nat8
+```
+
+
+## Function `dropByte`
+``` motoko no-repl
+func dropByte(bitbuffer : BitBuffer)
 ```
 
 
 ## Function `fromBytes`
 ``` motoko no-repl
-func fromBytes<NatX>(natlib : NatLib<NatX>, bytes : [Nat8]) : BitBuffer<NatX>
+func fromBytes(bytes : [Nat8]) : BitBuffer
+```
+
+========================== Bytes operations ==================================
+
+## Function `addBytes`
+``` motoko no-repl
+func addBytes(bitbuffer : BitBuffer, bytes : Iter<Nat8>)
 ```
 
 
-## Function `fromWords`
+## Function `getBytes`
 ``` motoko no-repl
-func fromWords<NatX>(natlib : NatLib<NatX>, words : [NatX]) : BitBuffer<NatX>
+func getBytes(bitbuffer : BitBuffer, bit_index : Nat, n : Nat) : [Nat8]
 ```
 
 
-## Function `withNat8Word`
+## Function `dropBytes`
 ``` motoko no-repl
-func withNat8Word(init_capacity : Nat) : BitBuffer<Nat8>
+func dropBytes(bitbuffer : BitBuffer, n : Nat)
 ```
 
 
-## Function `withNat16Word`
+## Function `addNat8`
 ``` motoko no-repl
-func withNat16Word(init_capacity : Nat) : BitBuffer<Nat16>
+func addNat8(bitbuffer : BitBuffer, nat8 : Nat8)
+```
+
+========================== Nat8 operations ==================================
+
+## Function `getNat8`
+``` motoko no-repl
+func getNat8(bitbuffer : BitBuffer, bit_index : Nat) : Nat8
 ```
 
 
-## Function `withNat32Word`
+## Function `dropNat8`
 ``` motoko no-repl
-func withNat32Word(init_capacity : Nat) : BitBuffer<Nat32>
+func dropNat8(bitbuffer : BitBuffer)
 ```
 
 
-## Function `withNat64Word`
+## Function `addNat16`
 ``` motoko no-repl
-func withNat64Word(init_capacity : Nat) : BitBuffer<Nat64>
+func addNat16(bitbuffer : BitBuffer, nat16 : Nat16)
+```
+
+========================== Nat16 operations ==================================
+
+## Function `getNat16`
+``` motoko no-repl
+func getNat16(bitbuffer : BitBuffer, bit_index : Nat) : Nat16
 ```
 
 
-## Function `toBytes`
+## Function `dropNat16`
 ``` motoko no-repl
-func toBytes<NatX>(bitbuffer : BitBuffer<NatX>) : [Nat8]
+func dropNat16(bitbuffer : BitBuffer)
 ```
 
 
-## Function `toWords`
+## Function `addNat32`
 ``` motoko no-repl
-func toWords<NatX>(bitbuffer : BitBuffer<NatX>) : [NatX]
+func addNat32(bitbuffer : BitBuffer, nat32 : Nat32)
+```
+
+========================== Nat32 operations ==================================
+
+## Function `getNat32`
+``` motoko no-repl
+func getNat32(bitbuffer : BitBuffer, bit_index : Nat) : Nat32
 ```
 
 
-## Function `bitcountNonZero`
+## Function `dropNat32`
 ``` motoko no-repl
-func bitcountNonZero<NatX>(bitbuffer : BitBuffer<NatX>) : Nat
+func dropNat32(bitbuffer : BitBuffer)
 ```
 
 
-## Function `isByteAligned`
+## Function `addNat64`
 ``` motoko no-repl
-func isByteAligned<NatX>(bitbuffer : BitBuffer<NatX>) : Bool
+func addNat64(bitbuffer : BitBuffer, nat64 : Nat64)
+```
+
+========================== Nat64 operations ==================================
+
+## Function `getNat64`
+``` motoko no-repl
+func getNat64(bitbuffer : BitBuffer, bit_index : Nat) : Nat64
 ```
 
 
-## Function `isWordAligned`
+## Function `dropNat64`
 ``` motoko no-repl
-func isWordAligned<NatX>(bitbuffer : BitBuffer<NatX>) : Bool
+func dropNat64(bitbuffer : BitBuffer)
+```
+
+
+## Function `addInt8`
+``` motoko no-repl
+func addInt8(bitbuffer : BitBuffer, int8 : Int8)
+```
+
+
+## Function `addInt16`
+``` motoko no-repl
+func addInt16(bitbuffer : BitBuffer, int16 : Int16)
+```
+
+
+## Function `addInt32`
+``` motoko no-repl
+func addInt32(bitbuffer : BitBuffer, int32 : Int32)
+```
+
+
+## Function `addInt64`
+``` motoko no-repl
+func addInt64(bitbuffer : BitBuffer, int64 : Int64)
 ```
 
