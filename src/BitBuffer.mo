@@ -321,7 +321,7 @@ module {
 
     public func fromBytes(bytes: [Nat8]) : BitBuffer {
         let bitbuffer = withByteCapacity(bytes.size());
-        addBytes(bitbuffer, bytes.vals());
+        addBytes(bitbuffer, bytes);
         bitbuffer
     };
 
@@ -336,7 +336,7 @@ module {
             addByte(bitbuffer, byte);
         };
     };
-    
+
     public func getBytes(bitbuffer : BitBuffer, bit_index : Nat, n : Nat) : [Nat8] {
         Array.tabulate(
             n,
