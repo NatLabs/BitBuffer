@@ -1,9 +1,9 @@
 [package]
 name = "bitbuffer"
-version = "0.0.2"
-description = "A buffer for bit level manipulation"
+version = "1.0.0"
+description = "A buffer for bit level and byte level manipulation"
 repository = "https://github.com/NatLabs/BitBuffer"
-keywords = [ "bits", "buffer", "byte" ]
+keywords = [ "bits", "buffer", "byte", "blob" ]
 
 [dependencies]
 base = "0.8.1"

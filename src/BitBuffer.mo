@@ -260,7 +260,7 @@ module {
         };
     };
 
-    /// ======================== Instantiation Functions ========================
+    /// ======================== Constructors ========================
 
     /// Initializes an empty bitbuffer
     public func new() : BitBuffer { BitBuffer(0) };
