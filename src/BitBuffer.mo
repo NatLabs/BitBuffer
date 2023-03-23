@@ -16,10 +16,7 @@ import Nat16 "mo:base/Nat16";
 import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 
-import Itertools "mo:itertools/Iter";
-import BufferDeque "mo:BufferDeque/BufferDeque";
-
-import Common "mo:BufferDeque/internal/Common";
+import BufferDeque "mo:buffer-deque/BufferDeque";
 
 import { divCeil; int_represented_as_nat } "internal/utils";
 
@@ -291,8 +288,8 @@ module {
     public func tabulate(bit_capacity : Nat, f : (Nat) -> Bool) : BitBuffer {
         let bitbuffer = BitBuffer(bit_capacity);
 
-        for (i in Itertools.range(0, bit_capacity)) {
-            bitbuffer.addBit(f(i));
+        for (i in Iter.range(1, bit_capacity)) {
+            bitbuffer.addBit(f(i - 1));
         };
 
         bitbuffer;

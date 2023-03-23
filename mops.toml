@@ -7,9 +7,7 @@ keywords = [ "bits", "buffer", "byte" ]
 
 [dependencies]
 base = "0.8.1"
-StableBuffer = "https://github.com/canscale/StableBuffer#v0.2.0"
-itertools = "0.1.1"
-BufferDeque = "https://github.com/NatLabs/BufferDeque#master"
+"buffer-deque" = "https://github.com/NatLabs/BufferDeque#main"
 
 [dev-dependencies]
 test = "1.0.1"
