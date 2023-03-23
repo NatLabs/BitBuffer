@@ -4,6 +4,12 @@ import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
+import Int "mo:base/Int";
+import Int8 "mo:base/Int8";
+import Int16 "mo:base/Int16";
+import Int32 "mo:base/Int32";
+import Int64 "mo:base/Int64";
+
 import Nat "mo:base/Nat";
 import Nat8 "mo:base/Nat8";
 import Nat16 "mo:base/Nat16";
@@ -12,464 +18,403 @@ import Nat64 "mo:base/Nat64";
 
 import Itertools "mo:itertools/Iter";
 import BufferDeque "mo:BufferDeque/BufferDeque";
+
 import Common "mo:BufferDeque/internal/Common";
 
-
-import NatLib "NatLib";
+import { divCeil; int_represented_as_nat } "internal/utils";
 
 module {
     type Buffer<A> = Buffer.Buffer<A>;
     type Iter<A> = Iter.Iter<A>;
-    public type NatLib<A> = NatLib.NatLib<A>;
-    
-    public class BitBuffer<NatX>(natlib : NatLib<NatX>, init_bit_capacity : Nat) = self {
 
-        let max_n : NatX = NatLib.getMax(natlib);
-        let word_size : Nat = NatLib.bits(natlib);
+    let BYTE = 8;
 
-        let init_buffer_capacity = (init_bit_capacity + (word_size - 1 : Nat) / word_size);
+    public class BitBuffer(init_bits : Nat) {
+        // TODO: Support little endian
+        // var big_endian : Bool = true;
 
-        let buffer = Buffer.Buffer<NatX>(init_buffer_capacity);
+        let init_capacity = divCeil(init_bits, BYTE);
+
+        let buffer = BufferDeque.BufferDeque<Nat8>(init_capacity);
         var total_bits : Nat = 0;
 
+        var dropped_bits : Nat = 0;
+
         /// Returns the number of bits in the buffer
-        public func size() : Nat { total_bits };
+        public func bitSize() : Nat { total_bits - dropped_bits };
 
-        /// Returns the number of bits in each word
-        public func wordSize() : Nat { word_size };
-
-        func allocated() : Nat {
-            buffer.size() * word_size;
+        /// Returns the max number of bits the buffer can hold without resizing
+        public func bitCapacity() : Nat {
+            (buffer.capacity() * BYTE) - dropped_bits;
         };
 
-        /// Returns the number of bits that can be stored in the buffer without
-        /// reallocation
-        public func capacity() : Nat {
-            buffer.capacity() * word_size;
-        };
+        /// Returns the number of bytes in the buffer
+        public func byteSize() : Nat { divCeil(bitSize(), BYTE) };
 
-        /// Counts the number of bits that match the given bit
-        public func bitcount(bit: Bool) : Nat {
-            var cnt_x : NatX = natlib.fromNat(0);
+        /// Returns the max number of bytes the buffer can hold without resizing
+        public func byteCapacity() : Nat { divCeil(bitCapacity(), BYTE) };
 
-            for (word in buffer.vals()) {
-                let n = natlib.bitcountNonZero(word);
-                cnt_x := natlib.add(cnt_x, n);
+        /// Returns the number of bits that match the given bit
+        public func bitcount(bit : Bool) : Nat {
+            var cnt = 0;
+
+            for (byte in buffer.vals()) {
+                cnt += Nat8.toNat(Nat8.bitcountNonZero(byte));
             };
-
-            let cnt = natlib.toNat(cnt_x);
 
             if (bit) { cnt } else { total_bits - cnt };
         };
 
-        // Returns the position of the word in the buffer
-        // and the postition bit in the word at the given index
-        func get_pos(index : Nat) : (Nat, Nat) {
-            (index / word_size, index % word_size);
-        };
+        /// Adds a single bit to the bitbuffer
+        public func addBit(bit : Bool) {
+            let (byte_index, bit_index) = get_pos(total_bits);
 
-        /// Returns the bit at the given index
-        public func get(index : Nat) : Bool {
-            if (index >= total_bits) {
-                Debug.trap("BitBuffer get(): Index out of bounds");
-            };
+            if (byte_index < buffer.size()) {
+                let byte = buffer.get(byte_index);
 
-            let (word_index, bit_index) = get_pos(index);
-            let word = buffer.get(word_index);
-            natlib.bittest(word, bit_index);
-        };
-        
-        public func getBits(i : Nat, n : Nat) : NatX {
-            
-            let (word_index, bit_index) = get_pos(i);
-            let word = buffer.get(word_index);
+                let new_byte = if (bit) {
+                    Nat8.bitset(byte, bit_index);
+                } else {
+                    Nat8.bitclear(byte, bit_index);
+                };
 
-            let top_segment_len = Nat.min(n, word_size - bit_index);
-            let top_segment = NatLib.slice(natlib, word, bit_index, top_segment_len);
+                buffer.put(byte_index, new_byte);
 
-            if (bit_index + n <= word_size){
-                return top_segment;
-            };
-
-            let next_word = buffer.get(word_index + 1);
-            let bottom_segment = NatLib.slice(natlib, next_word, 0, (n - top_segment_len) : Nat);
-            let bottom_segment_shift = natlib.bitshiftLeft(bottom_segment, natlib.fromNat(top_segment_len));
-
-            natlib.bitor(top_segment, bottom_segment_shift);
-
-        };
-
-        /// Gets the byte from the given index
-        public func getByte(i: Nat): Nat8 {
-            if (i >= total_bits) {
-                Debug.trap("BitBuffer getByte(): Index out of bounds");
-            };
-
-            let nbits = Nat.min(8, total_bits - i);
-
-            Debug.print("getByte(" # debug_show(i) # ") nbits: " # debug_show(nbits));
-            
-            let byte = getBits(i, Nat.min(8, total_bits - i));
-            Debug.print("byte: " # natlib.toText(byte));
-            let nat = natlib.toNat(byte) % 256;
-            
-            Debug.print("nat: " # Nat.toText(nat));
-            Nat8.fromNat(nat % (2 ** 8));
-        };
-
-        /// Sets the bit at the given index
-        public func put(i : Nat, bit : Bool) {
-            if (i >= total_bits) {
-                Debug.trap("BitBuffer put(): Index out of bounds");
-            };
-
-            let (word_index, bit_index) = get_pos(i);
-            let word = buffer.get(word_index);
-
-            let new_word = if (bit) {
-                natlib.bitset(word, bit_index);
             } else {
-                natlib.bitclear(word, bit_index);
+                buffer.addBack(if (bit) 1 else 0);
             };
-
-            buffer.put(word_index, new_word);
         };
 
-        func _putBits(i : Nat, n : Nat, bits : NatX) = debug {
-            let (word_index, bit_index) = get_pos(i);
+        /// Adds the given bits to the bitbuffer
+        public func addBits(n : Nat, bits : Nat) {
+            var var_bits = bits;
+            var nbits = n;
+            let nbytes = divCeil(nbits, BYTE);
 
-            let word = buffer.get(word_index);
+            let offset = total_bits % BYTE;
+            let overflow = (BYTE - offset) : Nat;
 
-            let len = Nat.min(n, (word_size - bit_index) : Nat);
+            if (offset == 0) {
+                for (i in Iter.range(0, nbytes - 1)) {
 
-            let new_word = NatLib.replaceSlice(natlib, word, bit_index, len, bits);
+                    let take_n_bits = if (nbits % BYTE == 0 or i + 1 < nbytes) {
+                        BYTE;
+                    } else { nbits % BYTE };
 
-            buffer.put(word_index, new_word);
+                    let byte = Nat8.fromNat(var_bits % (2 ** take_n_bits));
 
-            // if overflow of bits, put a new word
-            if (bit_index + n > word_size) {
-                let bottom_segment = NatLib.slice(natlib, bits, len, (n - len): Nat);
-                buffer.put(word_index + 1, bottom_segment);
-            };
-
-        };
-
-        /// Sets the bits at the given index
-        public func putBits(i : Nat, n : Nat, bits : NatX) {
-            if (i >= total_bits) {
-                Debug.trap("BitBuffer putBits(): Index out of bounds");
-            };
-
-            if (n > word_size) {
-                Debug.trap("BitBuffer putBits(): Number of bits to add is too large");
-            };
-
-            if (i + n > total_bits) {
-                Debug.trap("BitBuffer putBits(): Not enough bits in buffer");
-            };
-
-            _putBits(i, n, bits);
-        };
-
-        public func insert(i : Nat, bit : Bool) {
-            let natx = if (bit) {
-                natlib.fromNat(1);
+                    var_bits := var_bits / (2 ** take_n_bits);
+                    buffer.addBack(byte);
+                };
             } else {
-                natlib.fromNat(0);
+
+                while (nbits > 0) {
+                    var curr = Nat8.fromNat(var_bits % (2 ** overflow)) << Nat8.fromNat(offset);
+                    let last_index = (buffer.size() - 1 : Nat);
+
+                    let prev = switch (BufferDeque.peekBack(buffer)) {
+                        case (?x) x;
+                        case (null) {
+                            let zero : Nat8 = 0;
+                            buffer.addBack(zero);
+                            zero;
+                        };
+                    };
+
+                    buffer.put(buffer.size() - 1, prev | curr);
+                    var_bits := var_bits / (2 ** overflow);
+
+                    nbits -= overflow;
+
+                    if (nbits > 0) {
+                        let next_byte = Nat8.fromNat(var_bits % (2 ** offset));
+                        buffer.addBack(next_byte);
+                        nbits -= offset;
+                    };
+                };
             };
 
-            insertBits(i, 1, natx);
-        };
-
-        public func insertBits(i : Nat, n : Nat, bits : NatX) {
-            if (i > total_bits) {
-                Debug.trap("BitBuffer insertBits(): Index out of bounds");
-            };
-
-            if (n > word_size) {
-                Debug.trap("BitBuffer insertBits(): Number of bits to insert is too large");
-            };
-
-            if (total_bits + n > allocated()) {
-                buffer.add(natlib.fromNat(0));
-            };
-
-            let (word_index, bit_index) = get_pos(i);
-            var elems_after_index = (total_bits - i) : Nat;
-
-            while (elems_after_index > 0) {
-                let shift_n = Nat.min(elems_after_index, word_size);
-                let bit_index = ( i + elems_after_index - shift_n) : Nat;
-
-                let word = getBits(bit_index, shift_n);
-
-                _putBits(bit_index + n, shift_n, word);
-                elems_after_index -= shift_n;
-            };
-
-            _putBits(i, n, bits);
             total_bits += n;
         };
 
-        /// Adds a bit to the end of the buffer
-        /// ```motoko
-        /// import Nat32 "mo:base/Nat32";
-        /// import BitBuffer "mo:bitbuffer/BitBuffer";
-        ///
-        /// let bitbuffer = BitBuffer.BitBuffer<Nat32>(Nat32, 3);
-        ///
-        /// bitbuffer.add(true);
-        /// bitbuffer.add(false);
-        /// bitbuffer.add(true);
-        ///
-        /// assert bitbuffer.size() == 3;
-        /// assert bitbuffer.get(0) == true;
-        /// assert bitbuffer.get(1) == false;
-        /// assert bitbuffer.get(2) == true;
-        /// ```
-        public func add(bit : Bool) {
-            let (word_index, bit_index) = get_pos(total_bits);
+        func get_pos(i : Nat) : (Nat, Nat) {
+            let index = i + dropped_bits;
+            (index / BYTE, index % BYTE);
+        };
 
-            if (word_index >= buffer.size()) {
-                buffer.add(natlib.fromNat(0));
+        /// Returns the bit at the given index as a `Bool`
+        public func getBit(i : Nat) : Bool {
+            let (byte_index, bit_index) = get_pos(i);
+
+            if (byte_index >= buffer.size()) {
+                Debug.trap("BitBuffer getBit(): Cannot get bit outside of the buffer");
             };
 
-            let word = buffer.get(word_index);
+            let byte = buffer.get(byte_index);
+            Nat8.bittest(byte, bit_index);
+        };
 
-            let new_word = if (bit) {
-                natlib.bitset(word, bit_index);
+        /// Returns the bits at the given index as a `Nat`
+        public func getBits(i : Nat, n : Nat) : Nat {
+            let (byte_index, bit_index) = get_pos(i);
+
+            if (bit_index + n > bitSize()) {
+                Debug.trap("BitBuffer getBits(): Cannot get more bits than the buffer contains");
+            };
+
+            let top_segment_len = Nat.min(n, BYTE - bit_index);
+            let mask = 0xFF << Nat8.fromNat(bit_index);
+            let masked = (buffer.get(byte_index) & mask);
+            let read = Nat8.toNat(masked >> Nat8.fromNat(bit_index));
+            var bits = read % (2 ** top_segment_len);
+
+            var len = top_segment_len;
+
+            var j = 0;
+            while ((n - len : Nat) >= BYTE) {
+                let byte = Nat8.toNat(buffer.get(byte_index + j));
+                bits += byte * (2 ** len);
+                len += BYTE;
+                j += 1;
+            };
+
+            let diff = (n - len) : Nat;
+
+            if (diff > 0) {
+                let byte = Nat8.toNat(buffer.get(byte_index + j)) % (2 ** diff);
+                bits += byte * (2 ** len);
+            };
+
+            bits;
+        };
+
+        /// Drops the first bit from the buffer.
+        public func dropBit() {
+            if (dropped_bits + 1 == BYTE) {
+                ignore buffer.popFront();
+                dropped_bits := 0;
+                total_bits -= BYTE;
             } else {
-                natlib.bitclear(word, bit_index);
-            };
-
-            buffer.put(word_index, new_word);
-            total_bits += 1;
-        };
-
-        /// Adds bits to the end of the buffer up to the word_size
-        public func addBits(n : Nat, bits : NatX) = debug {
-            if (n > word_size) {
-                Debug.trap("BitBuffer addBits(): Number of bits to add is too large");
-            };
-
-            let bit_index = total_bits % word_size;
-
-            if (bit_index == 0 or (bit_index + n) > word_size) {
-                buffer.add(natlib.fromNat(0));
-            };
-
-            _putBits(total_bits, n, bits);
-            total_bits += n;
-        };
-
-        public func addByte(n: Nat8){
-            let nat = Nat8.toNat(n);
-            let bits = natlib.fromNat(nat);
-            addBits(8, bits);
-        };
-
-        public func addBytes(bytes: [Nat8]){
-            for (byte in bytes.vals()) {
-                addByte(byte);
+                dropped_bits += 1;
             };
         };
 
-        /// Appends the bits from the given buffer to the end of this buffer
-        public func append(other : BitBuffer<NatX>) {
-            var other_size = other.size();
-
-            for (word in other.words()) {
-                let n = Nat.min(word_size, other_size);
-                self.addBits(word_size, word);
-                other_size -= n;
-            };
-        };
-
-        public func removeLast() : ?Bool {
-            if (total_bits == 0) {
-                return null;
+        /// Drops the first `n` bits from the bitbuffer.
+        /// Trap if `n` is greater than the number of bits in the bitbuffer.
+        public func dropBits(n : Nat) {
+            if (n > bitSize()) {
+                Debug.trap("BitBuffer dropBits(): Cannot drop more bits than the buffer contains");
             };
 
-            ?remove(total_bits - 1);
-        };
+            var nbits = n;
 
-        public func remove(i: Nat) : Bool {
-            let bit = removeBits(i, 1);
-            natlib.toNat(bit) == 1
-        };
-
-        public func removeBits(i: Nat, n: Nat) : NatX {
-            let bits = getBits(i, n);
-
-            var j = i + n;
-
-            while (j < total_bits) {
-                let nbits = Nat.min(total_bits - j, word_size);
-                let word = getBits(j, nbits);
-                _putBits(j - n, nbits, word);
-                j += nbits;
+            if (nbits + dropped_bits >= BYTE) {
+                ignore buffer.popFront();
+                nbits -= (BYTE - dropped_bits);
+                total_bits -= BYTE;
             };
 
-            total_bits -= n;
-
-            if ((allocated() - total_bits : Nat) > word_size){
-                ignore buffer.removeLast();
+            while (nbits >= BYTE) {
+                ignore buffer.popFront();
+                nbits -= BYTE;
+                total_bits -= BYTE;
             };
 
-            bits
-        };
-
-        public func pad(n: Nat){
-            let zero = natlib.fromNat(0);
-            addBits(n, zero);
-        };
-
-        public func byteAlign(){
-            if (not isByteAligned(self)){
-                let padding = (8 - (total_bits % 8)) : Nat;
-                pad(padding);
-            }
-        };
-
-        public func wordAlign(){
-            if (not isWordAligned(self)){
-                let padding = (word_size - (total_bits % word_size)) : Nat;
-                pad(padding);
-            }
+            // The `dropped_bits` var gets subtracted from the `total_bits` in the `bitSize` method
+            dropped_bits := nbits;
         };
 
         /// Flips all the bits in the buffer
         public func invert() {
-            for (i in Itertools.range(0, buffer.size())) {
-                let word = buffer.get(i);
-                let new_word = natlib.bitnot(word);
-                buffer.put(i, new_word);
+            var i = 0;
+
+            while (i < buffer.size()) {
+                let byte = buffer.get(i);
+                let new_byte = Nat8.bitnot(byte);
+                buffer.put(i, new_byte);
+                i += 1;
             };
         };
 
-        /// Removes all the bits in the buffer
         public func clear() {
             buffer.clear();
             total_bits := 0;
+            dropped_bits := 0;
         };
 
-        public func clone() : BitBuffer<NatX> {
-            fromWords(natlib, Buffer.toArray(buffer))
-        };
-
-        public func words() : Iter<NatX> {
-            buffer.vals();
-        };
-
-        public func vals() : Iter<Bool> {
+        /// Returns an iterator over the bits in the buffer
+        public func bits() : Iter<Bool> {
             Iter.map(
-                Itertools.range(0, total_bits),
-                func(i : Nat) : Bool { self.get(i) },
+                Iter.range(1, bitSize()),
+                func(i : Nat) : Bool = getBit(i - 1),
             );
         };
+
+        /// Returns an iterator over the bytes in the buffer
+        public func bytes() : Iter<Nat8> { buffer.vals() };
+        
+        /// Aligns the buffer to the next byte boundary
+        public func byteAlign() {
+            let offset = total_bits % BYTE;
+
+            if (offset != 0) {
+                total_bits += BYTE - offset;
+            };
+        };
     };
 
-    public func init<NatX>(
-        natlib : NatLib<NatX>,
-        buffer_size : Nat,
-        val : Bool,
-    ) : BitBuffer<NatX> {
-        let bitbuffer = BitBuffer<NatX>(natlib, buffer_size);
-        var _buffer_size = buffer_size;
-        let word_size = NatLib.bits(natlib);
+    /// ======================== Instantiation Functions ========================
 
-        let word = if (val) {
-            NatLib.getMax(natlib);
-        } else {
-            natlib.fromNat(0);
-        };
+    /// Initializes an empty bitbuffer
+    public func new() : BitBuffer { BitBuffer(0) };
 
-        while (_buffer_size > 0){
-            let nbits = Nat.min(_buffer_size, word_size);
-            bitbuffer.addBits(nbits, word);
-            _buffer_size -= nbits;
-        };
+    /// Initializes a bitbuffer with the given byte capacity
+    public func withByteCapacity(byte_capacity : Nat) : BitBuffer { BitBuffer(byte_capacity * BYTE) };
 
-        bitbuffer;
-    };
+    /// Initializes a bitbuffer with `bit_capacity` bits and fills it with `ones` if `true` or `zeros` if `false`.
+    public func init(bit_capacity : Nat, ones : Bool ) : BitBuffer {
+        let bitbuffer = BitBuffer(bit_capacity);
+        var capacity = bit_capacity;
 
-    public func tabulate<NatX>(
-        natlib : NatLib<NatX>,
-        buffer_size : Nat,
-        f : (Nat) -> Bool,
-    ) : BitBuffer<NatX> {
-        let bitbuffer = BitBuffer<NatX>(natlib, buffer_size);
+        let byte = if (ones) {0xFF} else {0x00};
 
-        for (i in Itertools.range(0, buffer_size)) {
-            bitbuffer.add(f(i));
-        };
-
-        bitbuffer;
-    };
-
-    public func fromBytes<NatX>(natlib : NatLib<NatX>, bytes : [Nat8]) : BitBuffer<NatX> {
-        let bitbuffer = BitBuffer<NatX>(natlib, bytes.size() * 8);
-
-        for (byte in bytes.vals()) {
-            bitbuffer.addByte(byte);
+        while (capacity > 0){
+            let nbits = Nat.min(capacity, BYTE);
+            bitbuffer.addBits(nbits, byte);
+            capacity -= nbits;
         };
 
         bitbuffer;
     };
 
-    public func fromWords<NatX>(natlib : NatLib<NatX>, words : [NatX]) : BitBuffer<NatX> {
-        let word_bit_size = NatLib.bits(natlib);
-        let nbits = words.size() * word_bit_size;
-        let bitbuffer = BitBuffer<NatX>(natlib, nbits);
+    /// Initializes a bitbuffer with `bit_capacity` bits and fills it with the bits returned by the function `f`.
+    public func tabulate(bit_capacity : Nat, f : (Nat) -> Bool) : BitBuffer {
+        let bitbuffer = BitBuffer(bit_capacity);
 
-        for (word in words.vals()) {
-            bitbuffer.addBits(word_bit_size, word);
+        for (i in Itertools.range(0, bit_capacity)) {
+            bitbuffer.addBit(f(i));
         };
 
         bitbuffer;
     };
-    
-    public func withNat8Word(init_capacity: Nat) : BitBuffer<Nat8> {
-        BitBuffer<Nat8>(Nat8, init_capacity);
+
+    /// Checks if the bits in the buffer are byte aligned
+    public func isByteAligned(bitbuffer: BitBuffer) : Bool {
+        bitbuffer.bitSize() % 8 == 0;
     };
 
-    public func withNat16Word(init_capacity: Nat) : BitBuffer<Nat16> {
-        BitBuffer<Nat16>(Nat16, init_capacity);
-    };
-
-    public func withNat32Word(init_capacity : Nat) : BitBuffer<Nat32> {
-        BitBuffer<Nat32>(Nat32, init_capacity);
-    };
-
-    public func withNat64Word(init_capacity : Nat) : BitBuffer<Nat64> {
-        BitBuffer<Nat64>(Nat64, init_capacity);
-    };
-
-    public func toBytes<NatX>(bitbuffer: BitBuffer<NatX>) : [Nat8] {
-        let size = (bitbuffer.size() + (8 - 1 : Nat)) / 8;
-
-        Array.tabulate(
-            size,
-            func (i : Nat) : Nat8 {
-                bitbuffer.getByte(i * 8);
-            },
-        )
-    };
-
-    public func toWords<NatX>(bitbuffer: BitBuffer<NatX>) : [NatX] {
-        Iter.toArray(bitbuffer.words());
-    };
-
-    public func bitcountNonZero<NatX>(bitbuffer: BitBuffer<NatX>) : Nat {
+    /// Returns the number of bits that are set to `true` or `1` in the buffer
+    public func bitcountNonZero(bitbuffer: BitBuffer) : Nat {
         bitbuffer.bitcount(true);
     };
 
-    public func isByteAligned<NatX>(bitbuffer: BitBuffer<NatX>) : Bool {
-        bitbuffer.size() % 8 == 0;
+    /// ========================== Byte operations ==================================
+
+    public func addByte(bitbuffer : BitBuffer, byte : Nat8) {
+        bitbuffer.addBits(BYTE, Nat8.toNat(byte));
     };
 
-    public func isWordAligned<NatX>(bitbuffer: BitBuffer<NatX>) : Bool {
-        bitbuffer.size() % bitbuffer.wordSize() == 0;
+    public func getByte(bitbuffer : BitBuffer, bit_index : Nat) : Nat8 {
+        Nat8.fromNat(bitbuffer.getBits(bit_index, BYTE));
     };
 
+    public func dropByte(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE);
+
+    /// ========================== Bytes operations ==================================
+
+    public func fromBytes(bytes: [Nat8]) : BitBuffer {
+        let bitbuffer = withByteCapacity(bytes.size());
+        addBytes(bitbuffer, bytes.vals());
+        bitbuffer
+    };
+
+    public func addBytes(bitbuffer : BitBuffer, bytes : Iter<Nat8>) {
+        for (byte in bytes) {
+            addByte(bitbuffer, byte);
+        };
+    };
+
+    public func getBytes(bitbuffer : BitBuffer, bit_index : Nat, n : Nat) : [Nat8] {
+        Array.tabulate(
+            n,
+            func(i : Nat) : Nat8 {
+                getByte(bitbuffer, bit_index + (i * BYTE));
+            },
+        );
+    };
+
+    public func dropBytes(bitbuffer : BitBuffer, n : Nat) = bitbuffer.dropBits(n * BYTE);
+
+    /// ========================== Nat8 operations ==================================
+
+    public func addNat8(bitbuffer : BitBuffer, nat8 : Nat8) = addByte(bitbuffer, nat8);
+
+    public func getNat8(bitbuffer : BitBuffer, bit_index : Nat) : Nat8 = getByte(bitbuffer, bit_index);
+
+    public func dropNat8(bitbuffer : BitBuffer) = dropByte(bitbuffer);
+
+    /// ========================== Nat16 operations ==================================
+    public func addNat16(bitbuffer : BitBuffer, nat16 : Nat16) {
+        bitbuffer.addBits(BYTE * 2, Nat16.toNat(nat16));
+    };
+
+    public func getNat16(bitbuffer : BitBuffer, bit_index : Nat) : Nat16 {
+        Nat16.fromNat(bitbuffer.getBits(bit_index, BYTE * 2));
+    };
+
+    public func dropNat16(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 2);
+
+    /// ========================== Nat32 operations ==================================
+
+    public func addNat32(bitbuffer : BitBuffer, nat32 : Nat32) {
+        bitbuffer.addBits(BYTE * 4, Nat32.toNat(nat32));
+    };
+
+    public func getNat32(bitbuffer : BitBuffer, bit_index : Nat) : Nat32 {
+        Nat32.fromNat(bitbuffer.getBits(bit_index, BYTE * 4));
+    };
+
+    public func dropNat32(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 4);
+
+    /// ========================== Nat64 operations ==================================
+    public func addNat64(bitbuffer : BitBuffer, nat64 : Nat64) {
+        bitbuffer.addBits(BYTE * 8, Nat64.toNat(nat64));
+    };
+
+    public func getNat64(bitbuffer : BitBuffer, bit_index : Nat) : Nat64 {
+        Nat64.fromNat(bitbuffer.getBits(bit_index, BYTE * 8));
+    };
+
+    public func dropNat64(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 8);
+
+
+    
+
+    public func addInt8(bitbuffer : BitBuffer, int8 : Int8) {
+        bitbuffer.addBits(
+            BYTE,
+            int_represented_as_nat(Int8.toInt(int8), BYTE),
+        );
+    };
+
+    public func addInt16(bitbuffer : BitBuffer, int16 : Int16) {
+        bitbuffer.addBits(
+            BYTE * 2,
+            int_represented_as_nat(Int16.toInt(int16), BYTE * 2),
+        );
+    };
+
+    public func addInt32(bitbuffer : BitBuffer, int32 : Int32) {
+        bitbuffer.addBits(
+            BYTE * 4,
+            int_represented_as_nat(Int32.toInt(int32), BYTE * 4),
+        );
+    };
+
+    public func addInt64(bitbuffer : BitBuffer, int64 : Int64) {
+        bitbuffer.addBits(
+            BYTE * 8,
+            int_represented_as_nat(Int64.toInt(int64), BYTE * 8),
+        );
+    };
 };
