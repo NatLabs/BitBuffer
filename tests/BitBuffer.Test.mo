@@ -76,4 +76,21 @@ suite("BitBuffer", func() {
         assert bitbuffer.getBits(5, 100) == 422550200076076467165567735125;
 
     });
+
+    test("addBit()", func(){
+        let bitbuffer = BitBuffer.init(8, true);
+
+        assert bitbuffer.getBit(0) == true;
+
+        bitbuffer.addBit(false);
+        bitbuffer.addBit(true);
+        bitbuffer.addBit(false);
+
+        assert bitbuffer.getBit(8) == false;
+        assert bitbuffer.getBit(9) == true;
+        assert bitbuffer.getBit(10) == false;
+
+        assert bitbuffer.bitSize() == 11;
+
+    })
 });

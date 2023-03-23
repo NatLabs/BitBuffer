@@ -80,6 +80,8 @@ module {
             } else {
                 buffer.addBack(if (bit) 1 else 0);
             };
+
+            total_bits += 1;
         };
 
         /// Adds the given bits to the bitbuffer
@@ -106,7 +108,8 @@ module {
             } else {
 
                 while (nbits > 0) {
-                    var curr = Nat8.fromNat(var_bits % (2 ** overflow)) << Nat8.fromNat(offset);
+                    let len = Nat.min(nbits, overflow);
+                    var curr = Nat8.fromNat(var_bits % (2 ** len)) << Nat8.fromNat(offset);
                     let last_index = (buffer.size() - 1 : Nat);
 
                     let prev = switch (BufferDeque.peekBack(buffer)) {
@@ -119,14 +122,15 @@ module {
                     };
 
                     buffer.put(buffer.size() - 1, prev | curr);
-                    var_bits := var_bits / (2 ** overflow);
+                    var_bits := var_bits / (2 ** len);
 
-                    nbits -= overflow;
+                    nbits -= len;
 
                     if (nbits > 0) {
-                        let next_byte = Nat8.fromNat(var_bits % (2 ** offset));
+                        let len = Nat.min(nbits, offset);
+                        let next_byte = Nat8.fromNat(var_bits % (2 ** len));
                         buffer.addBack(next_byte);
-                        nbits -= offset;
+                        nbits -= len;
                     };
                 };
             };
@@ -260,7 +264,7 @@ module {
         };
     };
 
-    /// ======================== Constructors ========================
+    // ======================== Constructors ========================
 
     /// Initializes an empty bitbuffer
     public func new() : BitBuffer { BitBuffer(0) };
@@ -305,7 +309,7 @@ module {
         bitbuffer.bitcount(true);
     };
 
-    /// ========================== Byte operations ==================================
+    // ========================== Byte operations ==================================
 
     public func addByte(bitbuffer : BitBuffer, byte : Nat8) {
         bitbuffer.addBits(BYTE, Nat8.toNat(byte));
@@ -317,7 +321,7 @@ module {
 
     public func dropByte(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE);
 
-    /// ========================== Bytes operations ==================================
+    // ========================== Bytes operations ==================================
 
     public func fromBytes(bytes: [Nat8]) : BitBuffer {
         let bitbuffer = withByteCapacity(bytes.size());
@@ -348,7 +352,7 @@ module {
 
     public func dropBytes(bitbuffer : BitBuffer, n : Nat) = bitbuffer.dropBits(n * BYTE);
 
-    /// ========================== Nat8 operations ==================================
+    // ========================== Nat8 operations ==================================
 
     public func addNat8(bitbuffer : BitBuffer, nat8 : Nat8) = addByte(bitbuffer, nat8);
 
@@ -356,7 +360,7 @@ module {
 
     public func dropNat8(bitbuffer : BitBuffer) = dropByte(bitbuffer);
 
-    /// ========================== Nat16 operations ==================================
+    // ========================== Nat16 operations ==================================
     public func addNat16(bitbuffer : BitBuffer, nat16 : Nat16) {
         bitbuffer.addBits(BYTE * 2, Nat16.toNat(nat16));
     };
@@ -367,7 +371,7 @@ module {
 
     public func dropNat16(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 2);
 
-    /// ========================== Nat32 operations ==================================
+    // ========================== Nat32 operations ==================================
 
     public func addNat32(bitbuffer : BitBuffer, nat32 : Nat32) {
         bitbuffer.addBits(BYTE * 4, Nat32.toNat(nat32));
@@ -379,7 +383,7 @@ module {
 
     public func dropNat32(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 4);
 
-    /// ========================== Nat64 operations ==================================
+    // ========================== Nat64 operations ==================================
     public func addNat64(bitbuffer : BitBuffer, nat64 : Nat64) {
         bitbuffer.addBits(BYTE * 8, Nat64.toNat(nat64));
     };

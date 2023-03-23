@@ -1,6 +1,6 @@
 [package]
 name = "bitbuffer"
-version = "1.0.1"
+version = "1.1.0"
 description = "A buffer for bit level and byte level manipulation"
 repository = "https://github.com/NatLabs/BitBuffer"
 keywords = [ "bits", "buffer", "byte", "blob" ]
