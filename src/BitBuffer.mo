@@ -171,7 +171,7 @@ module {
 
             var len = top_segment_len;
 
-            var j = 0;
+            var j = 1;
             while ((n - len : Nat) >= BYTE) {
                 let byte = Nat8.toNat(buffer.get(byte_index + j));
                 bits += byte * (2 ** len);

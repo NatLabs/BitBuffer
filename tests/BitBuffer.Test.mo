@@ -77,6 +77,13 @@ suite("BitBuffer", func() {
 
     });
 
+    test("getBit() t2", func(){
+        let bitbuffer = BitBuffer.fromBytes([0xf3, 0x48]);
+        assert bitbuffer.getBits(3, 5) == 30;
+        assert bitbuffer.getBits(8, 3) == 0;
+        assert bitbuffer.getBits(3, 8) == 30;
+    });
+
     test("addBit()", func(){
         let bitbuffer = BitBuffer.init(8, true);
 
@@ -92,5 +99,5 @@ suite("BitBuffer", func() {
 
         assert bitbuffer.bitSize() == 11;
 
-    })
+    });
 });
