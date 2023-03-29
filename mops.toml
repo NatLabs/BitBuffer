@@ -7,7 +7,7 @@ keywords = [ "bits", "buffer", "byte", "blob" ]
 
 [dependencies]
 base = "0.8.1"
-"buffer-deque" = "https://github.com/NatLabs/BufferDeque#main"
+"buffer-deque" = "0.0.1"
 
 [dev-dependencies]
 test = "1.0.1"

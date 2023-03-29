@@ -93,46 +93,31 @@ module {
             let offset = total_bits % BYTE;
             let overflow = (BYTE - offset) : Nat;
 
-            if (offset == 0) {
-                for (i in Iter.range(0, nbytes - 1)) {
+            let len = Nat.min(nbits, overflow);
+            var curr = Nat8.fromNat(var_bits % (2 ** len)) << Nat8.fromNat(offset);
 
-                    let take_n_bits = if (nbits % BYTE == 0 or i + 1 < nbytes) {
-                        BYTE;
-                    } else { nbits % BYTE };
-
-                    let byte = Nat8.fromNat(var_bits % (2 ** take_n_bits));
-
-                    var_bits := var_bits / (2 ** take_n_bits);
-                    buffer.addBack(byte);
-                };
-            } else {
-
-                while (nbits > 0) {
-                    let len = Nat.min(nbits, overflow);
-                    var curr = Nat8.fromNat(var_bits % (2 ** len)) << Nat8.fromNat(offset);
-                    let last_index = (buffer.size() - 1 : Nat);
-
-                    let prev = switch (BufferDeque.peekBack(buffer)) {
-                        case (?x) x;
-                        case (null) {
-                            let zero : Nat8 = 0;
-                            buffer.addBack(zero);
-                            zero;
-                        };
-                    };
-
-                    buffer.put(buffer.size() - 1, prev | curr);
-                    var_bits := var_bits / (2 ** len);
-
-                    nbits -= len;
-
-                    if (nbits > 0) {
-                        let len = Nat.min(nbits, offset);
-                        let next_byte = Nat8.fromNat(var_bits % (2 ** len));
-                        buffer.addBack(next_byte);
-                        nbits -= len;
+            if (offset != 0) {
+                let prev = switch (BufferDeque.peekBack(buffer)) {
+                    case (?x) x;
+                    case (null) {
+                        let zero : Nat8 = 0;
+                        buffer.addBack(zero);
+                        zero;
                     };
                 };
+
+                buffer.put(buffer.size() - 1, prev | curr);
+                var_bits /= (2 ** len);
+
+                nbits -= len;
+            };
+
+            while (nbits > 0) {
+                let len = Nat.min(nbits, BYTE);
+                let next_byte = Nat8.fromNat(var_bits % (2 ** len));
+                var_bits /= (2 ** len);
+                buffer.addBack(next_byte);
+                nbits -= len;
             };
 
             total_bits += n;
@@ -154,7 +139,7 @@ module {
             let byte = buffer.get(byte_index);
             Nat8.bittest(byte, bit_index);
         };
-
+ 
         /// Returns the bits at the given index as a `Nat`
         public func getBits(i : Nat, n : Nat) : Nat {
             let (byte_index, bit_index) = get_pos(i);
@@ -253,7 +238,7 @@ module {
 
         /// Returns an iterator over the bytes in the buffer
         public func bytes() : Iter<Nat8> { buffer.vals() };
-        
+
         /// Aligns the buffer to the next byte boundary
         public func byteAlign() {
             let offset = total_bits % BYTE;
@@ -270,16 +255,18 @@ module {
     public func new() : BitBuffer { BitBuffer(0) };
 
     /// Initializes a bitbuffer with the given byte capacity
-    public func withByteCapacity(byte_capacity : Nat) : BitBuffer { BitBuffer(byte_capacity * BYTE) };
+    public func withByteCapacity(byte_capacity : Nat) : BitBuffer {
+        BitBuffer(byte_capacity * BYTE);
+    };
 
     /// Initializes a bitbuffer with `bit_capacity` bits and fills it with `ones` if `true` or `zeros` if `false`.
-    public func init(bit_capacity : Nat, ones : Bool ) : BitBuffer {
+    public func init(bit_capacity : Nat, ones : Bool) : BitBuffer {
         let bitbuffer = BitBuffer(bit_capacity);
         var capacity = bit_capacity;
 
-        let byte = if (ones) {0xFF} else {0x00};
+        let byte = if (ones) { 0xFF } else { 0x00 };
 
-        while (capacity > 0){
+        while (capacity > 0) {
             let nbits = Nat.min(capacity, BYTE);
             bitbuffer.addBits(nbits, byte);
             capacity -= nbits;
@@ -300,12 +287,12 @@ module {
     };
 
     /// Checks if the bits in the buffer are byte aligned
-    public func isByteAligned(bitbuffer: BitBuffer) : Bool {
+    public func isByteAligned(bitbuffer : BitBuffer) : Bool {
         bitbuffer.bitSize() % 8 == 0;
     };
 
     /// Returns the number of bits that are set to `true` or `1` in the buffer
-    public func bitcountNonZero(bitbuffer: BitBuffer) : Nat {
+    public func bitcountNonZero(bitbuffer : BitBuffer) : Nat {
         bitbuffer.bitcount(true);
     };
 
@@ -323,19 +310,19 @@ module {
 
     // ========================== Bytes operations ==================================
 
-    public func fromBytes(bytes: [Nat8]) : BitBuffer {
+    public func fromBytes(bytes : [Nat8]) : BitBuffer {
         let bitbuffer = withByteCapacity(bytes.size());
         addBytes(bitbuffer, bytes);
-        bitbuffer
+        bitbuffer;
     };
 
-    public func addBytes(bitbuffer : BitBuffer, bytes: [Nat8]) {
+    public func addBytes(bitbuffer : BitBuffer, bytes : [Nat8]) {
         for (byte in bytes.vals()) {
             addByte(bitbuffer, byte);
         };
     };
 
-    public func addBytesIter(bitbuffer: BitBuffer, bytes : Iter<Nat8>){
+    public func addBytesIter(bitbuffer : BitBuffer, bytes : Iter<Nat8>) {
         for (byte in bytes) {
             addByte(bitbuffer, byte);
         };
@@ -393,9 +380,6 @@ module {
     };
 
     public func dropNat64(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 8);
-
-
-    
 
     public func addInt8(bitbuffer : BitBuffer, int8 : Int8) {
         bitbuffer.addBits(
