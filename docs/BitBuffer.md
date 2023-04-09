@@ -140,7 +140,6 @@ Aligns the buffer to the next byte boundary
 func new() : BitBuffer
 ```
 
-======================== Instantiation Functions ========================
 Initializes an empty bitbuffer
 
 ## Function `withByteCapacity`
@@ -183,7 +182,6 @@ Returns the number of bits that are set to `true` or `1` in the buffer
 func addByte(bitbuffer : BitBuffer, byte : Nat8)
 ```
 
-========================== Byte operations ==================================
 
 ## Function `getByte`
 ``` motoko no-repl
@@ -202,11 +200,16 @@ func dropByte(bitbuffer : BitBuffer)
 func fromBytes(bytes : [Nat8]) : BitBuffer
 ```
 
-========================== Bytes operations ==================================
 
 ## Function `addBytes`
 ``` motoko no-repl
-func addBytes(bitbuffer : BitBuffer, bytes : Iter<Nat8>)
+func addBytes(bitbuffer : BitBuffer, bytes : [Nat8])
+```
+
+
+## Function `addBytesIter`
+``` motoko no-repl
+func addBytesIter(bitbuffer : BitBuffer, bytes : Iter<Nat8>)
 ```
 
 
@@ -227,7 +230,6 @@ func dropBytes(bitbuffer : BitBuffer, n : Nat)
 func addNat8(bitbuffer : BitBuffer, nat8 : Nat8)
 ```
 
-========================== Nat8 operations ==================================
 
 ## Function `getNat8`
 ``` motoko no-repl
@@ -246,7 +248,6 @@ func dropNat8(bitbuffer : BitBuffer)
 func addNat16(bitbuffer : BitBuffer, nat16 : Nat16)
 ```
 
-========================== Nat16 operations ==================================
 
 ## Function `getNat16`
 ``` motoko no-repl
@@ -265,7 +266,6 @@ func dropNat16(bitbuffer : BitBuffer)
 func addNat32(bitbuffer : BitBuffer, nat32 : Nat32)
 ```
 
-========================== Nat32 operations ==================================
 
 ## Function `getNat32`
 ``` motoko no-repl
@@ -284,7 +284,6 @@ func dropNat32(bitbuffer : BitBuffer)
 func addNat64(bitbuffer : BitBuffer, nat64 : Nat64)
 ```
 
-========================== Nat64 operations ==================================
 
 ## Function `getNat64`
 ``` motoko no-repl
