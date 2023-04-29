@@ -175,7 +175,14 @@ module {
         };
 
         /// Drops the first bit from the buffer.
-        public func dropBit() {
+        public func dropBit() : Bool {
+
+            if (bitSize() == 0) {
+                Debug.trap("BitBuffer dropBit(): Cannot drop bit from empty buffer");
+            };
+
+            let val = getBit(0);
+
             if (dropped_bits + 1 == BYTE) {
                 ignore buffer.popFront();
                 dropped_bits := 0;
@@ -183,14 +190,18 @@ module {
             } else {
                 dropped_bits += 1;
             };
+
+            val;
         };
 
         /// Drops the first `n` bits from the bitbuffer.
         /// Trap if `n` is greater than the number of bits in the bitbuffer.
-        public func dropBits(n : Nat) {
+        public func dropBits(n : Nat) : Nat {
             if (n > bitSize()) {
                 Debug.trap("BitBuffer dropBits(): Cannot drop more bits than the buffer contains");
             };
+
+            let val = getBits(0, n);
 
             var nbits = n;
 
@@ -208,6 +219,8 @@ module {
 
             // The `dropped_bits` var gets subtracted from the `total_bits` in the `bitSize` method
             dropped_bits := nbits;
+
+            val
         };
 
         /// Flips all the bits in the buffer
@@ -306,7 +319,7 @@ module {
         Nat8.fromNat(bitbuffer.getBits(bit_index, BYTE));
     };
 
-    public func dropByte(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE);
+    public func dropByte(bitbuffer : BitBuffer) : Nat8 = Nat8.fromNat(bitbuffer.dropBits(BYTE));
 
     // ========================== Bytes operations ==================================
 
@@ -337,7 +350,14 @@ module {
         );
     };
 
-    public func dropBytes(bitbuffer : BitBuffer, n : Nat) = bitbuffer.dropBits(n * BYTE);
+    public func dropBytes(bitbuffer : BitBuffer, n : Nat) : [Nat8]{
+        Array.tabulate(
+            n,
+            func(i : Nat) : Nat8 {
+                dropByte(bitbuffer);
+            },
+        );
+    };
 
     // ========================== Nat8 operations ==================================
 
@@ -345,7 +365,7 @@ module {
 
     public func getNat8(bitbuffer : BitBuffer, bit_index : Nat) : Nat8 = getByte(bitbuffer, bit_index);
 
-    public func dropNat8(bitbuffer : BitBuffer) = dropByte(bitbuffer);
+    public func dropNat8(bitbuffer : BitBuffer) : Nat8 = (dropByte(bitbuffer));
 
     // ========================== Nat16 operations ==================================
     public func addNat16(bitbuffer : BitBuffer, nat16 : Nat16) {
@@ -356,7 +376,7 @@ module {
         Nat16.fromNat(bitbuffer.getBits(bit_index, BYTE * 2));
     };
 
-    public func dropNat16(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 2);
+    public func dropNat16(bitbuffer : BitBuffer) : Nat16 = Nat16.fromNat(bitbuffer.dropBits(BYTE * 2));
 
     // ========================== Nat32 operations ==================================
 
@@ -368,7 +388,7 @@ module {
         Nat32.fromNat(bitbuffer.getBits(bit_index, BYTE * 4));
     };
 
-    public func dropNat32(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 4);
+    public func dropNat32(bitbuffer : BitBuffer) : Nat32 = Nat32.fromNat(bitbuffer.dropBits(BYTE * 4));
 
     // ========================== Nat64 operations ==================================
     public func addNat64(bitbuffer : BitBuffer, nat64 : Nat64) {
@@ -379,7 +399,7 @@ module {
         Nat64.fromNat(bitbuffer.getBits(bit_index, BYTE * 8));
     };
 
-    public func dropNat64(bitbuffer : BitBuffer) = bitbuffer.dropBits(BYTE * 8);
+    public func dropNat64(bitbuffer : BitBuffer) : Nat64 = Nat64.fromNat(bitbuffer.dropBits(BYTE * 8));
 
     public func addInt8(bitbuffer : BitBuffer, int8 : Int8) {
         bitbuffer.addBits(
