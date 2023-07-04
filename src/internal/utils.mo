@@ -1,4 +1,5 @@
 import Nat "mo:base/Nat";
+import Debug "mo:base/Debug";
 import Int "mo:base/Int";
 
 module {
